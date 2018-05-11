@@ -10,6 +10,19 @@
 \title{Build Your Own Lisp}
 
 
+\hypersetup{
+  pdffitwindow=true,
+  pdfstartview={FitH},
+  pdftitle={Build Your Own Lisp},
+  pdfauthor={Eric Bailey <eric@ericb.me>},
+  pdfsubject={Working through the eponymous book},
+  pdfkeywords={UNIX, C language, learning, lisp, programming langauge theory},
+  colorlinks=true,
+  linkcolor=ErlangRed,
+  urlcolor=ErlangRed
+}
+
+
 \date{%
   May 10, 2018
   \thanks{Last updated \today}%
@@ -42,51 +55,63 @@ puts("Press ctrl-c to exit\n");
 <<Include the boolean type and values.>>
 <<Include the standard I/O functions.>>
 <<Include the standard library definitions.>>
+
+<<Include the line editing functions from libedit.>>
+
+
 @
 
 
-<<prompt.c>>=
-#include <editline/readline.h>
-@ %def add_history
-@ %def readline
+\begin{marginfigure}
+  Here, \cee{input} is functionally equivalent to \cee{input != NULL}, and
+  \cee{*input} is functionally equivalent to \cee{input[0] != '\0'}, i.e.
+  \cee{input} is non-null and nonempty, respectively.
+
+<<[[input]] is nonempty>>=
+input && *input
+@
+
+<<add [[input]] to the history table>>=
+add_history(input);
+@
+\end{marginfigure}
 
 
 <<prompt.c>>=
 bool eval(char *input)
 {
-  if (input && *input) {
-    add_history(input);
-    printf("< %s\n", input);
-  }
-  
-  // N.B. This is a no-op when !input.
-  free(input);
+    if (<<[[input]] is nonempty>>) {
+        <<add [[input]] to the history table>>
+        printf("< %s\n", input);
+    }
+    // N.B. This is a no-op when !input.
+    free(input);
 
-  return (bool)input;
+    return (bool) input;
 }
-@
+
+
+@ %def eval
 
 
 <<prompt.c>>=
 int main(int argc, char *argv[])
 {
-  <<Print version and exit information.>>
+    <<Print version and exit information.>>
 
-  bool keep_going = true;
-  while (keep_going) {
-    keep_going = eval(readline("> "));
-  }
+    while (eval(readline("> ")))
+        continue;
 
-  return 0;
+    return 0;
 }
 @
 
 
-\section{Common Headers}
+\section{Headers}
 
 <<Include the boolean type and values.>>=
 #include <stdbool.h>
-@ %def true
+@ %def bool
 
 <<Include the standard I/O functions.>>=
 #include <stdio.h>
@@ -96,8 +121,13 @@ int main(int argc, char *argv[])
 #include <stdlib.h>
 @ %def free
 
+<<Include the line editing functions from libedit.>>=
+#include <editline/readline.h>
+@ %def add_history
+@ %def readline
 
-%% \newpage
+
+\newpage
 \section{Chunks}
 \nowebchunks
 
