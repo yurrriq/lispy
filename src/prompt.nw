@@ -32,11 +32,65 @@
 
 \section{Prompt}
 
+<<Print version and exit information.>>=
+puts("Lispy v0.0.1");
+puts("Press ctrl-c to exit\n");
+@
+
+
+Declare a buffer for user input of size 2048.
+<<Declare a buffer for user input.>>=
+#define INPUT_SIZE 2048
+
+static char input[INPUT_SIZE];
+@ %def input
+
+
+<<prompt.c>>=
+<<Include the standard I/O functions.>>
+
+<<Declare a buffer for user input.>>
+
+@
+
+
+Given a \cee{prompt} string, [[read]] user input.
+<<prompt.c>>=
+char *read(const char *prompt)
+{
+  fputs(prompt, stdout);
+  return fgets(input, INPUT_SIZE, stdin);
+}
+@ %def read
+
+
+<<prompt.c>>=
+void eval()
+{
+  printf("< %s", input);
+}
+@
+
+
 <<prompt.c>>=
 int main(int argc, char *argv[])
 {
+  <<Print version and exit information.>>
+
+  while (read("> ") != NULL) {
+    eval();
+  }
+
+
   return 0;
 }
+@
+
+
+\section{Common Headers}
+
+<<Include the standard I/O functions.>>=
+#include <stdio.h>
 @
 
 
@@ -53,4 +107,3 @@ int main(int argc, char *argv[])
 \listoftodos{To-Do}
 
 \end{document}
-
