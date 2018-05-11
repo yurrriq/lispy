@@ -19,6 +19,9 @@ stdenv.mkDerivation rec {
   src = ./src;
 
   outputs = [ "out" "docs" ];
+
+  FONTCONFIG_FILE = makeFontsConf { fontDirectories = [ iosevka ]; };
+
   nativeBuildInputs = [
     gcc
     indent
