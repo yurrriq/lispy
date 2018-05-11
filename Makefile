@@ -1,36 +1,25 @@
-CFLAGS ?= -Wall -std=c99
-cpif   ?= | cpif
-
-
-ifneq (,$(findstring B,$(MAKEFLAGS)))
-latexmk_flags = -gg
-endif
-
-latexmk_flags += -cd -pdf
-
-
-.SUFFIXES: .nw .c .tex .pdf
+nix-shell ?= nix-shell --pure
 
 
 .PHONY: all
-all: src/prompt.c bin/prompt docs/prompt.pdf
+all: bin docs srcs
 
 
-.nw.c:
-	notangle -R$(notdir $@) $< ${cpif} $@
-	indent -kr -nut $@
+.PHONY: bin
+bin:
+	@ ${nix-shell} --run 'nix-build'
+	@ find -L result -executable -type f -exec install -vm755 -Dt $@ {} +
+	@ ${RM} result
 
 
-.tex.pdf:
-	ln -sf ../src/preamble.tex docs/
-	latexmk ${latexmk_flags} $<
-	rm docs/preamble.tex
+.PHONY: srcs
+srcs:
+	${nix-shell} --run 'make -C src $@'
 
 
-bin/%: src/%.c
-	@ mkdir -p $(dir $@)
-	${CC} ${CFLAGS} -o $@ $<
 
-
-docs/%.tex: src/%.nw
-	noweave -n -delay -index $< ${cpif} $@
+.PHONY: docs
+docs:
+	@ ${nix-shell} --run 'nix-build -A $@'
+	@ find -L result-$@ -name '*.pdf' -type f -exec install -vm644 -Dt $@ {} +
+	@ ${RM} result-$@
