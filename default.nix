@@ -29,8 +29,36 @@ stdenv.mkDerivation rec {
     noweb
     python36Packages.pygments
     (texlive.combine {
-      inherit (texlive) scheme-full tufte-latex;
-    })
+      inherit (texlive) scheme-small
+        beamer
+        dirtytalk
+        ec
+        etoolbox
+        fancyref
+        fancyvrb
+        float
+        fontspec
+        framed
+        fvextra
+        hardwrap
+        ifplatform
+        latexmk
+        lineno
+        mathtools
+        minted
+        realscripts
+        setspace
+        textcase
+        titlesec
+        todonotes
+        tufte-latex
+        upquote
+        xetex
+        xkeyval
+        xltxtra
+        xstring
+        zapfding;
+      })
     which
   ];
 }
