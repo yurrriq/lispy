@@ -6,7 +6,7 @@ all: bin docs srcs
 
 
 .PHONY: bin
-bin:
+bin: srcs
 ifeq (,${IN_NIX_SHELL})
 	@ ${nix-shell} --run 'nix-build'
 else

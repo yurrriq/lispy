@@ -49,6 +49,9 @@ static char input[INPUT_SIZE];
 <<prompt.c>>=
 <<Include the standard I/O functions.>>
 
+#include <editline/readline.h>
+
+
 <<Declare a buffer for user input.>>
 
 @

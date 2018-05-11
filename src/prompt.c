@@ -1,5 +1,8 @@
 #include <stdio.h>
 
+#include <editline/readline.h>
+
+
 #define INPUT_SIZE 2048
 
 static char input[INPUT_SIZE];
