@@ -26,7 +26,7 @@ stdenv.mkDerivation rec {
     gcc
     indent
     iosevka
-    glibc.static
+    # glibc.static
     libedit.dev
     nix
     noweb

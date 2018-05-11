@@ -38,39 +38,31 @@ puts("Press ctrl-c to exit\n");
 @
 
 
-Declare a buffer for user input of size 2048.
-<<Declare a buffer for user input.>>=
-#define INPUT_SIZE 2048
-
-static char input[INPUT_SIZE];
-@ %def input
-
-
 <<prompt.c>>=
+<<Include the boolean type and values.>>
 <<Include the standard I/O functions.>>
-
-#include <editline/readline.h>
-
-
-<<Declare a buffer for user input.>>
-
+<<Include the standard library definitions.>>
 @
 
 
-Given a \cee{prompt} string, [[read]] user input.
 <<prompt.c>>=
-char *read(const char *prompt)
-{
-  fputs(prompt, stdout);
-  return fgets(input, INPUT_SIZE, stdin);
-}
-@ %def read
+#include <editline/readline.h>
+@ %def add_history
+@ %def readline
 
 
 <<prompt.c>>=
-void eval()
+bool eval(char *input)
 {
-  printf("< %s", input);
+  if (input && *input) {
+    add_history(input);
+    printf("< %s\n", input);
+  }
+  
+  // N.B. This is a no-op when !input.
+  free(input);
+
+  return (bool)input;
 }
 @
 
@@ -80,10 +72,10 @@ int main(int argc, char *argv[])
 {
   <<Print version and exit information.>>
 
-  while (read("> ") != NULL) {
-    eval();
+  bool keep_going = true;
+  while (keep_going) {
+    keep_going = eval(readline("> "));
   }
-
 
   return 0;
 }
@@ -92,9 +84,17 @@ int main(int argc, char *argv[])
 
 \section{Common Headers}
 
+<<Include the boolean type and values.>>=
+#include <stdbool.h>
+@ %def true
+
 <<Include the standard I/O functions.>>=
 #include <stdio.h>
-@
+@ %def printf
+
+<<Include the standard library definitions.>>=
+#include <stdlib.h>
+@ %def free
 
 
 %% \newpage

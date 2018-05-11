@@ -1,4 +1,4 @@
-CFLAGS  ?= -static -std=c99 -Wall -Werror
+CFLAGS  ?= -ledit -std=c99 -Wall -Werror
 NW_SRCS := $(wildcard *.nw)
 cpif    ?= | cpif
 
