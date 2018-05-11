@@ -1,0 +1,56 @@
+% -*- mode: ess-noweb; ess-noweb-default-code-mode: c-mode; -*-
+
+
+\documentclass[nobib]{tufte-handout}
+
+
+\input{preamble.tex}
+
+
+\title{Build Your Own Lisp}
+
+
+\date{%
+  May 10, 2018
+  \thanks{Last updated \today}%
+}
+
+
+\begin{document}
+
+\maketitle
+@
+
+
+\begin{abstract}
+  \todoo{Write an abstract}
+\end{abstract}
+
+
+\tableofcontents
+
+
+\section{Prompt}
+
+<<prompt.c>>=
+int main(int argc, char *argv[])
+{
+  return 0;
+}
+@
+
+
+%% \newpage
+\section{Chunks}
+\nowebchunks
+
+
+\section{Index}
+\nowebindex
+
+
+%% \newpage
+\listoftodos{To-Do}
+
+\end{document}
+
