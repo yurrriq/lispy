@@ -39,6 +39,7 @@
 <<parsing.c>>=
 <<Include the necessary headers.>>
 
+
 <<Define the Lispy grammar.>>
 
 
@@ -46,12 +47,16 @@ int main(int argc, char *argv[])
 {
     <<Define the language.>>
 
+    
     <<Print version and exit information.>>
 
+    
     <<Loop until the input is empty.>>
 
+    
     <<Undefine and delete the parsers.>>
 
+    
     return 0;
 }
 @
@@ -98,6 +103,7 @@ mpc_parser_t *Number   = mpc_new("number");
 mpc_parser_t *Operator = mpc_new("operator");
 mpc_parser_t *Expr     = mpc_new("expr");
 mpc_parser_t *Lispy    = mpc_new("lispy");
+
 @ %def Integer
 @ %def Decimal
 @ %def Number
@@ -106,13 +112,17 @@ mpc_parser_t *Lispy    = mpc_new("lispy");
 @ %def Lispy
 
 
-Finally, using the defined grammar and each of the created parsers,
+Finally, using the defined grammar and each of the [[<<created parsers>>]],%
+%
+<<created parsers>>=
+Integer, Decimal, Number, Operator, Expr, Lispy
+@
+%
 we can define the Lispy language.
 
 <<Define the language.>>=
 mpca_lang(MPCA_LANG_DEFAULT, LISPY_GRAMMAR,
-          Integer, Decimal, Number,
-          Operator, Expr, Lispy);
+          <<created parsers>>);
 @
 
 
@@ -121,7 +131,7 @@ ourselves.  The \cee{mpc} library makes this easy, by providing the
 [[mpc_cleanup]] function.
 
 <<Undefine and delete the parsers.>>=
-mpc_cleanup(4, Number, Operator, Expr, Lispy);
+mpc_cleanup(6, <<created parsers>>);
 @
 
 
@@ -216,6 +226,7 @@ if ((nonempty = (<<[[input]] is nonempty>>))) {
     <<Add [[input]] to the history table.>>
     <<Eval(uate) user input and print the result.>>
 }
+
 @
 
 Dealloc the space pointed to by [[input]],
@@ -236,8 +247,6 @@ free(input);
 
 <<Include the line editing functions from libedit.>>
 <<Include the micro parser combinator definitions.>>
-
-
 @
 
 

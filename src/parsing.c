@@ -6,7 +6,6 @@
 #include <mpc.h>
 
 
-
 #define LISPY_GRAMMAR \
         " integer  : /-?[0-9]+/ ;                            " \
         " decimal  : /-?[0-9]+\\.[0-9]+/ ;                   " \
@@ -24,11 +23,14 @@ int main(int argc, char *argv[])
     mpc_parser_t *Operator = mpc_new("operator");
     mpc_parser_t *Expr = mpc_new("expr");
     mpc_parser_t *Lispy = mpc_new("lispy");
+
     mpca_lang(MPCA_LANG_DEFAULT, LISPY_GRAMMAR,
               Integer, Decimal, Number, Operator, Expr, Lispy);
 
+
     puts("Lispy v0.0.1");
     puts("Press ctrl-c to exit\n");
+
 
     bool nonempty;
     do {
@@ -44,10 +46,13 @@ int main(int argc, char *argv[])
                 mpc_err_delete(res.error);
             }
         }
+
         free(input);
     } while (nonempty);
 
-    mpc_cleanup(4, Number, Operator, Expr, Lispy);
+
+    mpc_cleanup(6, Integer, Decimal, Number, Operator, Expr, Lispy);
+
 
     return 0;
 }
