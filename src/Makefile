@@ -10,7 +10,11 @@ endif
 latexmk_flags += -pdf -silent
 
 
-.SUFFIXES: .nw .tex .pdf
+.SUFFIXES: .mpc .nw .tex .pdf .xxd
+
+.mpc.xxd:
+	xxd -i <$< >$@
+
 
 .nw.tex:
 	noweave -n -delay -index $< ${cpif} $@
@@ -20,10 +24,7 @@ latexmk_flags += -pdf -silent
 
 
 .PHONY: all srcs bins pdfs
-all:  srcs bins pdfs
-srcs: parsing.c
-bins: lispy
-pdfs: byol.pdf
+all: parsing.c lispy.mpc byol.pdf lispy
 
 
 parsing.c: byol.nw
@@ -35,16 +36,12 @@ lispy.mpc: byol.nw
 	notangle -R$@ $< ${cpif} $@
 
 
-.INTERMEDIATE: lispy.xxd
-lispy.xxd: lispy.mpc
-	xxd -i <$< >$@
-
-
 lispy: parsing.c lispy.xxd
 	${CC} ${C_FLAGS} $< ${C_LIBS} -o $@
 
 
 .PHONY: install
-install:
-	install -m755 -Dt "$$out/bin" lispy
+install: lispy byol.pdf lispy.mpc parsing.c
+	install -m755 -Dt "$$out/bin/" lispy
 	install -m644 -Dt "$$docs/" byol.pdf
+	install -m644 -Dt "$$dev/src/" lispy.mpc parsing.c

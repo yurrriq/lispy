@@ -73,7 +73,7 @@ What good is a REPL\todoo{acronym} without a welcome message?
 For now, simply print the version and describe how to exit.
 
 <<Print version and exit information.>>=
-puts("Lispy v0.5.0");
+puts("Lispy v%VERSION%");
 puts("Press ctrl-c to exit\n");
 @
 

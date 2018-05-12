@@ -1,5 +1,5 @@
 language: nix
-script: nix-shell --pure --run make
+script: nix-shell --pure --run "make branch=${TRAVIS_BRANCH}"
 
 deploy:
   provider: pages

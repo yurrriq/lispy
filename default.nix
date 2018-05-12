@@ -9,7 +9,9 @@ let
   importJSON = path: builtins.fromJSON (builtins.readFile path);
 in
 
-{ nixpkgs ? fetchNixpkgs (importJSON ./nixpkgs-src.json) }:
+{ nixpkgs ? fetchNixpkgs (importJSON ./nixpkgs-src.json)
+, branch ? "develop"
+}:
 
 with import nixpkgs {
   config.packageOverrides = super: {
@@ -53,7 +55,12 @@ stdenv.mkDerivation rec {
   version = builtins.readFile ./VERSION;
   src = ./src;
 
-  outputs = [ "out" "docs" ];
+  preBuild = ''
+    substituteInPlace byol.nw --replace '%VERSION%' '${version}'
+    substituteInPlace preamble.tex --replace '%BRANCH%' '${branch}'
+  '';
+
+  outputs = [ "out" "docs" "dev" ];
 
   FONTCONFIG_FILE = makeFontsConf { fontDirectories = [ iosevka ]; };
 
@@ -68,6 +75,7 @@ stdenv.mkDerivation rec {
     which
     xxd
   ];
+
   buildInputs = [
     libedit.dev
     mpc.dev
