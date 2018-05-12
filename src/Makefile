@@ -37,7 +37,7 @@ lispy.mpc: byol.nw
 
 
 lispy.xxd: lispy.mpc
-	xxd -i <$< | sed '$$s/$$/, 0/' >$@	
+	xxd -i <$< >$@
 
 
 parsing: parsing.c
