@@ -31,7 +31,6 @@ parsing.c: byol.nw lispy.xxd
 	indent -kr -nut $@
 
 
-.INTERMEDIATE: lispy.mpc
 lispy.mpc: byol.nw
 	notangle -R$@ $< ${cpif} $@
 
