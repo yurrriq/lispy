@@ -7,7 +7,7 @@ ifneq (,$(findstring B,$(MAKEFLAGS)))
 latexmk_flags = -gg
 endif
 
-latexmk_flags += -cd -pdf -silent
+latexmk_flags += -pdf -silent
 
 
 .SUFFIXES: .nw .tex .pdf
