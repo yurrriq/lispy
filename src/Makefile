@@ -22,7 +22,7 @@ latexmk_flags += -cd -pdf -silent
 .PHONY: all srcs bins pdfs
 all:  srcs bins pdfs
 srcs: parsing.c
-bins: parsing
+bins: lispy
 pdfs: byol.pdf
 
 
@@ -40,11 +40,11 @@ lispy.xxd: lispy.mpc
 	xxd -i <$< >$@
 
 
-parsing: parsing.c lispy.xxd
+lispy: parsing.c lispy.xxd
 	${CC} ${C_FLAGS} $< ${C_LIBS} -o $@
 
 
 .PHONY: install
 install:
-	install -m755 -Dt "$$out/bin" parsing
+	install -m755 -Dt "$$out/bin" lispy
 	install -m644 -Dt "$$docs/" byol.pdf
