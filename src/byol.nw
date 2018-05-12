@@ -1,0 +1,211 @@
+% -*- mode: ess-noweb; ess-noweb-default-code-mode: c-mode; -*-
+
+
+\documentclass[nobib]{tufte-handout}
+
+
+\input{preamble.tex}
+
+
+\title{Build Your Own Lisp}
+
+
+\hypersetup{
+  pdffitwindow=true,
+  pdfstartview={FitH},
+  pdftitle={Build Your Own Lisp},
+  pdfauthor={Eric Bailey <eric@ericb.me>},
+  pdfsubject={Working through the eponymous book},
+  pdfkeywords={UNIX, C language, learning, lisp, programming langauge theory},
+  colorlinks=true,
+  linkcolor=ErlangRed,
+  urlcolor=ErlangRed
+}
+
+
+\date{%
+  May 10, 2018
+  \thanks{Last updated \today}%
+}
+
+
+\begin{document}
+
+\maketitle
+@
+
+
+\begin{abstract}
+  \todoo{Write an abstract}
+\end{abstract}
+
+
+\tableofcontents
+
+
+\section{Prompt}
+
+<<Print version and exit information.>>=
+puts("Lispy v0.0.1");
+puts("Press ctrl-c to exit\n");
+@
+
+\begin{marginfigure}
+  Here, \cee{input} is functionally equivalent to \cee{input != NULL}, and
+  \cee{*input} is functionally equivalent to \cee{input[0] != '\0'}, i.e.
+  \cee{input} is non-null and nonempty, respectively.
+
+<<[[input]] is nonempty>>=
+input && *input
+@
+
+<<Add [[input]] to the history table.>>=
+add_history(input);
+@
+\end{marginfigure}
+
+
+<<Create some parsers.>>=
+mpc_parser_t *Number   = mpc_new("number");
+mpc_parser_t *Operator = mpc_new("operator");
+mpc_parser_t *Expr     = mpc_new("expr");
+mpc_parser_t *Lispy    = mpc_new("lispy");
+@ %def Number
+@ %def Operator
+@ %def Expr
+@ %def Lispy
+
+
+Define the Lispy grammar.
+<<parsing.c>>=
+#define LISPY_GRAMMAR \
+        " number   : /-?[0-9]+/ ;                            " \
+        " operator : '+' | '-' | '*' | '/' ;                 " \
+        " expr     : <number> | '(' <operator> <expr>+ ')' ; " \
+        " lispy    : /^/ <expr>+ /$/ ;                       "
+@
+
+
+<<Define the parsers with the Lispy grammar.>>=
+mpca_lang(MPCA_LANG_DEFAULT, LISPY_GRAMMAR, Number, Operator, Expr, Lispy);
+@
+
+
+<<Undefine and delete our parsers.>>=
+mpc_cleanup(4, Number, Operator, Expr, Lispy);
+@
+
+
+<<The input can be parsed as Lispy code.>>=
+mpc_parse("<stdin>", input, Lispy, &res)
+@
+
+
+\begin{marginfigure}%
+<<Print and delete the AST.>>=
+mpc_ast_print(res.output);
+mpc_ast_delete(res.output);
+@
+
+<<Print and delete the error.>>=
+mpc_err_print(res.error);
+mpc_err_delete(res.error);
+@
+\end{marginfigure}
+
+<<Attempt to parse the user input.>>=
+mpc_result_t res;
+if (<<The input can be parsed as Lispy code.>>) {
+    <<Print and delete the AST.>>
+} else {
+    <<Print and delete the error.>>
+}
+@
+
+
+<<parsing.c>>=
+<<Include the necessary headers.>>
+
+
+int main(int argc, char *argv[])
+{
+    <<Create some parsers.>>
+
+    <<Define the parsers with the Lispy grammar.>>
+
+    <<Print version and exit information.>>
+
+    bool nonempty;
+    do {
+        char *input = readline("> ");
+        if ((nonempty = (<<[[input]] is nonempty>>))) {
+            <<Add [[input]] to the history table.>>
+            <<Attempt to parse the user input.>>
+        }
+
+        free(input); // N.B. This is a no-op when !input.
+    } while (nonempty);
+
+    <<Undefine and delete our parsers.>>
+
+    return 0;
+}
+@
+
+
+\section{Headers}
+
+<<Include the necessary headers.>>=
+<<Include the boolean type and values.>>
+<<Include the standard I/O functions.>>
+<<Include the standard library definitions.>>
+
+<<Include the line editing functions from libedit.>>
+<<Include the micro parser combinator definitions.>>
+
+
+@
+
+
+<<Include the boolean type and values.>>=
+#include <stdbool.h>
+@ %def bool
+
+<<Include the standard I/O functions.>>=
+#include <stdio.h>
+@ %def printf
+
+<<Include the standard library definitions.>>=
+#include <stdlib.h>
+@ %def free
+
+<<Include the line editing functions from libedit.>>=
+#include <editline/readline.h>
+@ %def add_history
+@ %def readline
+
+<<Include the micro parser combinator definitions.>>=
+#include <mpc.h>
+@ %def mpc_ast_delete
+@ %def mpc_ast_print
+@ %def mpc_cleanup
+@ %def mpc_error_delete
+@ %def mpc_error_print
+@ %def mpc_parse
+@ %def mpc_parser_t
+@ %def mpc_result_t
+
+
+\newpage
+\section{Chunks}
+\nowebchunks
+
+
+\section{Index}
+\nowebindex
+
+
+%% \newpage
+\listoftodos{To-Do}
+
+\end{document}

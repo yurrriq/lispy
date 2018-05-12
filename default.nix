@@ -11,28 +11,11 @@ in
 
 { nixpkgs ? fetchNixpkgs (importJSON ./nixpkgs-src.json) }:
 
-with import nixpkgs {};
-
-stdenv.mkDerivation rec {
-  name = "lispy-${version}";
-  version = builtins.readFile ./VERSION;
-  src = ./src;
-
-  outputs = [ "out" "docs" ];
-
-  FONTCONFIG_FILE = makeFontsConf { fontDirectories = [ iosevka ]; };
-
-  nativeBuildInputs = [
-    gcc
-    indent
-    iosevka
-    # glibc.static
-    libedit.dev
-    nix
-    noweb
-    python36Packages.pygments
-    (texlive.combine {
-      inherit (texlive) scheme-small
+with import nixpkgs {
+  config.packageOverrides = super: {
+    mpc = super.callPackage ./pkgs/development/libraries/mpc {};
+    xelatex-noweb = (super.texlive.combine {
+      inherit (super.texlive) scheme-small
         beamer
         dirtytalk
         ec
@@ -61,7 +44,31 @@ stdenv.mkDerivation rec {
         xltxtra
         xstring
         zapfding;
-      })
+      });
+  };
+};
+
+stdenv.mkDerivation rec {
+  name = "lispy-${version}";
+  version = builtins.readFile ./VERSION;
+  src = ./src;
+
+  outputs = [ "out" "docs" ];
+
+  FONTCONFIG_FILE = makeFontsConf { fontDirectories = [ iosevka ]; };
+
+  nativeBuildInputs = [
+    gcc
+    indent
+    iosevka
+    xelatex-noweb
+    nix
+    noweb
+    python36Packages.pygments
     which
+  ];
+  buildInputs = [
+    libedit.dev
+    mpc.dev
   ];
 }
