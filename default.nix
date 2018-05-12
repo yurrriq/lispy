@@ -66,6 +66,7 @@ stdenv.mkDerivation rec {
     noweb
     python36Packages.pygments
     which
+    xxd
   ];
   buildInputs = [
     libedit.dev

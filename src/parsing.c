@@ -6,13 +6,9 @@
 #include <mpc.h>
 
 
-#define LISPY_GRAMMAR \
-        " integer  : /-?[0-9]+/ ;                            " \
-        " decimal  : /-?[0-9]+\\.[0-9]+/ ;                   " \
-        " number   : <decimal> | <integer> ;                 " \
-        " operator : '+' | '-' | '*' | '/' ;                 " \
-        " expr     : <number> | '(' <operator> <expr>+ ')' ; " \
-        " lispy    : /^/ <expr>+ /$/ ;                       "
+static const char LISPY_GRAMMAR[] = {
+#include "lispy.xxd"
+};
 
 
 int main(int argc, char *argv[])

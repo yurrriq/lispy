@@ -26,9 +26,19 @@ bins: parsing
 pdfs: byol.pdf
 
 
-parsing.c: byol.nw
+parsing.c: byol.nw lispy.xxd
 	notangle -R$@ $< ${cpif} $@
 	indent -kr -nut $@
+
+
+.INTERMEDIATE: lispy.mpc
+lispy.mpc: byol.nw
+	notangle -R$@ $< ${cpif} $@
+
+
+lispy.xxd: lispy.mpc
+	xxd -i <$< | sed '$$s/$$/, 0/' >$@	
+
 
 parsing: parsing.c
 	${CC} ${C_FLAGS}$< ${C_LIBS} -o $@

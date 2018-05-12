@@ -40,23 +40,23 @@
 <<Include the necessary headers.>>
 
 
-<<Define the Lispy grammar.>>
+<<Load the Lispy grammar.>>
 
 
 int main(int argc, char *argv[])
 {
     <<Define the language.>>
 
-    
+
     <<Print version and exit information.>>
 
-    
+
     <<Loop until the input is empty.>>
 
-    
+
     <<Undefine and delete the parsers.>>
 
-    
+
     return 0;
 }
 @
@@ -82,16 +82,22 @@ puts("Press ctrl-c to exit\n");
 
 In order to make sense of user input, we need to define a grammar.
 
-\todoo{Safely load from a file using \cee{mpca_lang_contents}.}
-<<Define the Lispy grammar.>>=
-#define LISPY_GRAMMAR \
-        " integer  : /-?[0-9]+/ ;                            " \
-        " decimal  : /-?[0-9]+\\.[0-9]+/ ;                   " \
-        " number   : <decimal> | <integer> ;                 " \
-        " operator : '+' | '-' | '*' | '/' ;                 " \
-        " expr     : <number> | '(' <operator> <expr>+ ')' ; " \
-        " lispy    : /^/ <expr>+ /$/ ;                       "
+<<lispy.mpc>>=
+integer  : /-?[0-9]+/ ;
+decimal  : /-?[0-9]+\.[0-9]+/ ;
+number   : <decimal> | <integer> ;
+operator : '+' | '-' | '*' | '/' ;
+expr     : <number> | '(' <operator> <expr>+ ')' ;
+lispy    : /^/ <expr>+ /$/ ;
+@
+
+\todoo{Describe this trick}
+<<Load the Lispy grammar.>>=
+static const char LISPY_GRAMMAR[] = {
+#include "lispy.xxd"
+};
 @ %def LISPY_GRAMMAR
+\marginnote{See: \url{https://stackoverflow.com/a/411000}}
 
 
 To implement the grammar, we need to create some parsers.
