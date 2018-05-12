@@ -1,5 +1,8 @@
 #define LISPY_GRAMMAR \
-        " number   : /-?[0-9]+/ ;                            " \
+        " digit    : /[0-9]/ ;                               " \
+        " integer  : /-?/ <digit>+ ;                         " \
+        " decimal  : /-?/ <digit>+ '.' <digit>+ ;            " \
+        " number   : <decimal> | <integer> ;                 " \
         " operator : '+' | '-' | '*' | '/' ;                 " \
         " expr     : <number> | '(' <operator> <expr>+ ')' ; " \
         " lispy    : /^/ <expr>+ /$/ ;                       "
@@ -15,13 +18,16 @@
 
 int main(int argc, char *argv[])
 {
+    mpc_parser_t *Digit = mpc_new("digit");
+    mpc_parser_t *Integer = mpc_new("integer");
+    mpc_parser_t *Decimal = mpc_new("decimal");
     mpc_parser_t *Number = mpc_new("number");
     mpc_parser_t *Operator = mpc_new("operator");
     mpc_parser_t *Expr = mpc_new("expr");
     mpc_parser_t *Lispy = mpc_new("lispy");
 
-    mpca_lang(MPCA_LANG_DEFAULT, LISPY_GRAMMAR, Number, Operator, Expr,
-              Lispy);
+    mpca_lang(MPCA_LANG_DEFAULT, LISPY_GRAMMAR,
+              Digit, Integer, Decimal, Number, Operator, Expr, Lispy);
 
     puts("Lispy v0.0.1");
     puts("Press ctrl-c to exit\n");

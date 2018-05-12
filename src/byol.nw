@@ -66,10 +66,16 @@ add_history(input);
 
 
 <<Create some parsers.>>=
+mpc_parser_t *Digit    = mpc_new("digit");
+mpc_parser_t *Integer  = mpc_new("integer");
+mpc_parser_t *Decimal  = mpc_new("decimal");
 mpc_parser_t *Number   = mpc_new("number");
 mpc_parser_t *Operator = mpc_new("operator");
 mpc_parser_t *Expr     = mpc_new("expr");
 mpc_parser_t *Lispy    = mpc_new("lispy");
+@ %def Digit
+@ %def Integer
+@ %def Decimal
 @ %def Number
 @ %def Operator
 @ %def Expr
@@ -79,7 +85,10 @@ mpc_parser_t *Lispy    = mpc_new("lispy");
 Define the Lispy grammar.
 <<parsing.c>>=
 #define LISPY_GRAMMAR \
-        " number   : /-?[0-9]+/ ;                            " \
+        " digit    : /[0-9]/ ;                               " \
+        " integer  : /-?/ <digit>+ ;                         " \
+        " decimal  : /-?/ <digit>+ '.' <digit>+ ;            " \
+        " number   : <decimal> | <integer> ;                 " \
         " operator : '+' | '-' | '*' | '/' ;                 " \
         " expr     : <number> | '(' <operator> <expr>+ ')' ; " \
         " lispy    : /^/ <expr>+ /$/ ;                       "
@@ -87,7 +96,9 @@ Define the Lispy grammar.
 
 
 <<Define the parsers with the Lispy grammar.>>=
-mpca_lang(MPCA_LANG_DEFAULT, LISPY_GRAMMAR, Number, Operator, Expr, Lispy);
+mpca_lang(MPCA_LANG_DEFAULT, LISPY_GRAMMAR,
+          Digit, Integer, Decimal, Number,
+          Operator, Expr, Lispy);
 @
 
 
