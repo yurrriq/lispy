@@ -1,4 +1,4 @@
-C_FLAGS ?= -std=c99 -Wall -Werror 
+C_FLAGS ?= -std=c99 -Wall -Werror
 C_LIBS  := -ledit -lmpc
 cpif    ?= | cpif
 
@@ -26,7 +26,7 @@ bins: parsing
 pdfs: byol.pdf
 
 
-parsing.c: byol.nw lispy.xxd
+parsing.c: byol.nw
 	notangle -R$@ $< ${cpif} $@
 	indent -kr -nut $@
 
@@ -35,12 +35,13 @@ lispy.mpc: byol.nw
 	notangle -R$@ $< ${cpif} $@
 
 
+.INTERMEDIATE: lispy.xxd
 lispy.xxd: lispy.mpc
 	xxd -i <$< >$@
 
 
-parsing: parsing.c
-	${CC} ${C_FLAGS}$< ${C_LIBS} -o $@
+parsing: parsing.c lispy.xxd
+	${CC} ${C_FLAGS} $< ${C_LIBS} -o $@
 
 
 .PHONY: install

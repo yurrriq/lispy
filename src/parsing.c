@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
               Integer, Decimal, Number, Operator, Expr, Lispy);
 
 
-    puts("Lispy v0.4.1");
+    puts("Lispy v0.4.2");
     puts("Press ctrl-c to exit\n");
 
 
