@@ -36,44 +36,68 @@
 
 
 \begin{abstract}
-  \todoo{Write an abstract}
+<<parsing.c>>=
+<<Include the necessary headers.>>
+
+<<Define the Lispy grammar.>>
+
+
+int main(int argc, char *argv[])
+{
+    <<Define the language.>>
+
+    <<Print version and exit information.>>
+
+    <<Loop until the input is empty.>>
+
+    <<Undefine and delete the parsers.>>
+
+    return 0;
+}
+@
 \end{abstract}
 
 
 \tableofcontents
 
 
-\section{Prompt}
+\newpage
+\section{Welcome}
+
+What good is a REPL\todoo{acronym} without a welcome message?
+For now, simply print the version and describe how to exit.
 
 <<Print version and exit information.>>=
 puts("Lispy v0.0.1");
 puts("Press ctrl-c to exit\n");
 @
 
-\begin{marginfigure}
-  Here, \cee{input} is functionally equivalent to \cee{input != NULL}, and
-  \cee{*input} is functionally equivalent to \cee{input[0] != '\0'}, i.e.
-  \cee{input} is non-null and nonempty, respectively.
 
-<<[[input]] is nonempty>>=
-input && *input
-@
+\section{Defining the Language}
 
-<<Add [[input]] to the history table.>>=
-add_history(input);
-@
-\end{marginfigure}
+In order to make sense of user input, we need to define a grammar.
+
+\todoo{Safely load from a file using \cee{mpca_lang_contents}.}
+<<Define the Lispy grammar.>>=
+#define LISPY_GRAMMAR \
+        " integer  : /-?[0-9]+/ ;                            " \
+        " decimal  : /-?[0-9]+\\.[0-9]+/ ;                   " \
+        " number   : <decimal> | <integer> ;                 " \
+        " operator : '+' | '-' | '*' | '/' ;                 " \
+        " expr     : <number> | '(' <operator> <expr>+ ')' ; " \
+        " lispy    : /^/ <expr>+ /$/ ;                       "
+@ %def LISPY_GRAMMAR
 
 
-<<Create some parsers.>>=
-mpc_parser_t *Digit    = mpc_new("digit");
+To implement the grammar, we need to create some parsers.
+
+<<Define the language.>>=
 mpc_parser_t *Integer  = mpc_new("integer");
 mpc_parser_t *Decimal  = mpc_new("decimal");
 mpc_parser_t *Number   = mpc_new("number");
 mpc_parser_t *Operator = mpc_new("operator");
 mpc_parser_t *Expr     = mpc_new("expr");
 mpc_parser_t *Lispy    = mpc_new("lispy");
-@ %def Digit
 @ %def Integer
 @ %def Decimal
 @ %def Number
@@ -82,86 +106,125 @@ mpc_parser_t *Lispy    = mpc_new("lispy");
 @ %def Lispy
 
 
-Define the Lispy grammar.
-<<parsing.c>>=
-#define LISPY_GRAMMAR \
-        " digit    : /[0-9]/ ;                               " \
-        " integer  : /-?/ <digit>+ ;                         " \
-        " decimal  : /-?/ <digit>+ '.' <digit>+ ;            " \
-        " number   : <decimal> | <integer> ;                 " \
-        " operator : '+' | '-' | '*' | '/' ;                 " \
-        " expr     : <number> | '(' <operator> <expr>+ ')' ; " \
-        " lispy    : /^/ <expr>+ /$/ ;                       "
-@
+Finally, using the defined grammar and each of the created parsers,
+we can define the Lispy language.
 
-
-<<Define the parsers with the Lispy grammar.>>=
+<<Define the language.>>=
 mpca_lang(MPCA_LANG_DEFAULT, LISPY_GRAMMAR,
-          Digit, Integer, Decimal, Number,
+          Integer, Decimal, Number,
           Operator, Expr, Lispy);
 @
 
 
-<<Undefine and delete our parsers.>>=
+Since we're implementing this in C, we need to clean up after
+ourselves.  The \cee{mpc} library makes this easy, by providing the
+[[mpc_cleanup]] function.
+
+<<Undefine and delete the parsers.>>=
 mpc_cleanup(4, Number, Operator, Expr, Lispy);
 @
 
+
+\section{R is for Read}
+
+To implement the R in REPL\todoo{acronym},
+use [[readline]] from editline\todoo{Add a link}.
+
+<<Read a line of user input.>>=
+char *input = readline("> ");
+@ %def input
+
+To check whether user input is nonempty, and thus whether we should
+continue looping, use the following expression.
+
+<<[[input]] is nonempty>>=
+input && *input
+@
+
+Here, \cee{input} is functionally equivalent to \cee{input != NULL}, and
+\cee{*input} is functionally equivalent to \cee{input[0] != '\0'}, i.e.
+[[input]] is non-null and nonempty, respectively.
+
+So long as [[input]] is nonempty, add it to the \cee{editline} history table.
+<<Add [[input]] to the history table.>>=
+add_history(input);
+@
+
+Declare a variable, [[res]], to hold the results
+of attempting to parse user input as Lispy code.
+
+<<Declare a variable to hold parsing results.>>=
+mpc_result_t res;
+@
+
+To attempt said parsing, use [[mpc_parse]], the result of which
+we can branch on to handle success and failure.
 
 <<The input can be parsed as Lispy code.>>=
 mpc_parse("<stdin>", input, Lispy, &res)
 @
 
 
-\begin{marginfigure}%
-<<Print and delete the AST.>>=
-mpc_ast_print(res.output);
-mpc_ast_delete(res.output);
-@
+\section{E is for Eval(uate)}
 
-<<Print and delete the error.>>=
-mpc_err_print(res.error);
-mpc_err_delete(res.error);
-@
-\end{marginfigure}
+\todor{Evalute the AST}
 
-<<Attempt to parse the user input.>>=
-mpc_result_t res;
+<<Eval(uate) user input and print the result.>>=
+<<Declare a variable to hold parsing results.>>
 if (<<The input can be parsed as Lispy code.>>) {
     <<Print and delete the AST.>>
 } else {
     <<Print and delete the error.>>
 }
+@ %def res
+
+
+\section{P is for Print}
+
+For now, simply print the AST\todoo{acronym} upon success,
+<<Print and delete the AST.>>=
+mpc_ast_print(res.output);
+mpc_ast_delete(res.output);
 @
 
+or the error upon failure.
+<<Print and delete the error.>>=
+mpc_err_print(res.error);
+mpc_err_delete(res.error);
+@
 
-<<parsing.c>>=
-<<Include the necessary headers.>>
+\section{L is for Loop}
 
+<<Loop until the input is empty.>>=
+bool nonempty;
+do {
+  <<Read, eval(uate), and print.>>
+} while (nonempty);
+@ %def nonempty
 
-int main(int argc, char *argv[])
-{
-    <<Create some parsers.>>
+As previously described, in the body of the loop, {R}ead a line of user input.
 
-    <<Define the parsers with the Lispy grammar.>>
+<<Read, eval(uate), and print.>>=
+<<Read a line of user input.>>
+@
 
-    <<Print version and exit information.>>
+If, and only if, it's not empty, add it to the history table,
+evaluate it, and print the result.
 
-    bool nonempty;
-    do {
-        char *input = readline("> ");
-        if ((nonempty = (<<[[input]] is nonempty>>))) {
-            <<Add [[input]] to the history table.>>
-            <<Attempt to parse the user input.>>
-        }
-
-        free(input); // N.B. This is a no-op when !input.
-    } while (nonempty);
-
-    <<Undefine and delete our parsers.>>
-
-    return 0;
+<<Read, eval(uate), and print.>>=
+if ((nonempty = (<<[[input]] is nonempty>>))) {
+    <<Add [[input]] to the history table.>>
+    <<Eval(uate) user input and print the result.>>
 }
 @
+
+Dealloc the space pointed to by [[input]],
+making it available for futher allocation.
+
+<<Read, eval(uate), and print.>>=
+free(input);
+@
+\marginnote{N.B. This is a no-op when \cee{!input}.}
 
 
 \section{Headers}
@@ -200,23 +263,33 @@ int main(int argc, char *argv[])
 @ %def mpc_ast_delete
 @ %def mpc_ast_print
 @ %def mpc_cleanup
-@ %def mpc_error_delete
-@ %def mpc_error_print
+@ %def mpc_err_delete
+@ %def mpc_err_print
 @ %def mpc_parse
 @ %def mpc_parser_t
 @ %def mpc_result_t
 
 
-\newpage
+\todor{Add a full listing}
+
+
+%% \newpage
 \section{Chunks}
 \nowebchunks
 
 
+\newpage
 \section{Index}
 \nowebindex
 
 
-%% \newpage
-\listoftodos{To-Do}
+\todor{Add a bibliography}
+
+
+\todor{Add a glossary}
+
+
+\newpage
+\listoftodos
 
 \end{document}
