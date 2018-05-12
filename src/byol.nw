@@ -285,10 +285,13 @@ free(input);
 @ %def mpc_result_t
 
 
-\todor{Add a full listing}
+\newpage
+\section{Full Listing}
+
+\inputc{parsing.c}
 
 
-%% \newpage
+\newpage
 \section{Chunks}
 \nowebchunks
 
