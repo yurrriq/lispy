@@ -52,6 +52,8 @@
   }%
 }
 
+\newcommand{\marginhref}[2]{\href{#1}{#2}\thanks{\url{#1}}}
+
 
 \usepackage[colorinlistoftodos,prependcaption,textsize=small]{todonotes}
 \newcommand{\todocolor}[3]{%
@@ -60,6 +62,17 @@
 }
 \newcommand{\todor}[1]{\todocolor{red}{FIXME}{#1}}
 \newcommand{\todoo}[1]{\todocolor{orange}{TODO}{#1}}
+
+
+\usepackage[nopostdot,toc,xindy]{glossaries}
+\makeglossaries
+\input{glossary}
+% \renewcommand*{\glstextformat}[1]{\textsl{#1}}
+
+
+
+\usepackage[nottoc,notlot,notlof]{tocbibind}
+\renewcommand\bibname{References}
 
 
 \author{Eric Bailey}

@@ -1,7 +1,6 @@
 % -*- mode: ess-noweb; ess-noweb-default-code-mode: c-mode; -*-
 
-
-\documentclass[nobib]{tufte-handout}
+\documentclass{tufte-handout}
 
 
 \input{preamble.tex}
@@ -36,7 +35,12 @@
 
 
 \begin{abstract}
-  \todor{Write an abstract}
+  For my own edification, and my eternal love of the LISP family and
+  \acrshort{plt}, what follows is an implementation in C of a simple,
+  Lisp-like programming language, based on Build Your Own
+  Lisp \citep{byol}. Since I'm a bit of masochist, this is a
+  \marginhref{https://en.wikipedia.org/wiki/Literate_programming}{literate
+    program}, written using Noweb\cite{noweb}.
 \end{abstract}
 
 
@@ -44,10 +48,50 @@
 
 
 \newpage
+\section{Outline}
+
+\todoo{Describe the outline}
+
+<<parsing.c>>=
+<<Include the necessary headers.>>
+
+
+<<Load the Lispy grammar.>>
+
+
+double eval_binop(char *op, double x, double y)
+{
+  <<Eval(uate) a binary operation.>>
+}
+
+
+double eval(mpc_ast_t *ast)
+{
+    <<Eval(uate) the AST.>>
+}
+
+
+int main(int argc, char *argv[])
+{
+    <<Define the language.>>
+
+    <<Print version and exit information.>>
+
+    <<Loop until the input is empty.>>
+
+    <<Undefine and delete the parsers.>>
+
+    return 0;
+}
+@ %def eval
+@ %def eval_binop
+
+
+\newpage
 \section{Welcome}
 
-What good is a REPL\todoo{acronym} without a welcome message?
-For now, simply print the version and describe how to exit.
+What good is a \gls{repl} without a welcome message?  For now, simply
+print the version and describe how to exit.
 
 <<Print version and exit information.>>=
 puts("Lispy v%VERSION%");
@@ -57,7 +101,7 @@ puts("Press ctrl-c to exit\n");
 
 \section{Defining the Language}
 
-In order to make sense of user input, we need to define a grammar.
+In order to make sense of user input, we need to define a \gls{grammar}.
 
 <<lispy.mpc>>=
 integer  : /-?[0-9]+/ ;
@@ -77,7 +121,7 @@ static const char LISPY_GRAMMAR[] = {
 \marginnote{See: \url{https://stackoverflow.com/a/411000}}
 
 
-To implement the grammar, we need to create some parsers.
+To implement the \gls{grammar}, we need to create some \glspl{parser}.
 
 <<Define the language.>>=
 mpc_parser_t *Integer  = mpc_new("integer");
@@ -95,8 +139,9 @@ mpc_parser_t *Lispy    = mpc_new("lispy");
 @ %def Lispy
 
 
-Finally, using the defined grammar and each of the [[<<created parsers>>]],%
-%
+Finally, using the defined \gls{grammar} and
+each of the [[<<created parsers>>]],
+
 <<created parsers>>=
 Integer, Decimal, Number, Operator, Expr, Lispy
 @
@@ -110,9 +155,9 @@ mpca_lang(MPCA_LANG_DEFAULT, LISPY_GRAMMAR,
 @
 
 
-Since we're implementing this in C, we need to clean up after
-ourselves.  The \cee{mpc} library makes this easy, by providing the
-[[mpc_cleanup]] function.
+Since we're implementing this in C, we need to clean up after ourselves.  The
+\cee{mpc}\cite{mpc} library makes this easy, by providing the [[mpc_cleanup]]
+function.
 
 <<Undefine and delete the parsers.>>=
 mpc_cleanup(6, <<created parsers>>);
@@ -121,8 +166,8 @@ mpc_cleanup(6, <<created parsers>>);
 
 \section{R is for Read}
 
-To implement the R in REPL\todoo{acronym},
-use [[readline]] from editline\todoo{Add a link}.
+To implement the R in \acrshort{repl}, use [[readline]]
+from \cee{libedit}\cite{libedit}.
 
 <<Read a line of user input.>>=
 char *input = readline("> ");
@@ -139,7 +184,9 @@ Here, \cee{input} is functionally equivalent to \cee{input != NULL}, and
 \cee{*input} is functionally equivalent to \cee{input[0] != '\0'}, i.e.
 [[input]] is non-null and nonempty, respectively.
 
-So long as [[input]] is nonempty, add it to the \cee{editline} history table.
+So long as [[input]] is nonempty, add it to the
+\cee{libedit}\cite{libedit} history table.
+
 <<Add [[input]] to the history table.>>=
 add_history(input);
 @
@@ -161,8 +208,6 @@ mpc_parse("<stdin>", input, Lispy, &parsed)
 
 \section{E is for Eval(uate)}
 
-\todor{Evalute the AST}
-
 Since our terms consist of only numbers and operations thereon, the
 [[result]] of evaluating a Lispy expression can be represented as a
 \cee{double}-precision number.
@@ -177,7 +222,7 @@ double result = eval(ast);
 
 \todor{Describe the evaluation strategy}
 
-If the expression is tagged as a number, return it directly.
+If the \gls{ast} is tagged as a number, return it directly.
 
 <<Eval(uate) the AST.>>=
 if (strstr(ast->tag, "number"))
@@ -186,9 +231,9 @@ if (strstr(ast->tag, "number"))
 @
 
 
-If the AST is neither an integer nor a float, then it's an expression.
-
-Use the \cee{int i} to interate through the children of the AST.
+If the \acrshort{ast} is neither an integer nor a float, then it's an
+expression.  Use the \cee{int i} to interate through the children of
+the \acrshort{ast}.
 
 <<Eval(uate) the AST.>>=
 int i = 0;
@@ -295,7 +340,7 @@ return result;
 
 \section{P is for Print}
 
-Upon success, print the result and delete the AST\todoo{acronym}.
+Upon success, print the result and delete the \acrshort{ast}.
 
 <<Print the result and delete the AST.>>=
 printf("%g\n", result);
@@ -409,46 +454,10 @@ free(input);
 
 
 \newpage
-\section{Full Listing}
+\section{Full Listings}
 
-<<parsing.c>>=
-<<Include the necessary headers.>>
-
-
-<<Load the Lispy grammar.>>
-
-
-double eval_binop(char *op, double x, double y)
-{
-  <<Eval(uate) a binary operation.>>
-}
-
-
-double eval(mpc_ast_t *ast)
-{
-    <<Eval(uate) the AST.>>
-}
-
-
-int main(int argc, char *argv[])
-{
-    <<Define the language.>>
-
-    <<Print version and exit information.>>
-
-    <<Loop until the input is empty.>>
-
-    <<Undefine and delete the parsers.>>
-
-    return 0;
-}
-@ %def eval
-@ %def eval_binop
-
-
-%% \newpage
-%% \srclink{lispy.mpc}:
-%% \inputminted{ruby}{lispy.mpc}
+\srclink{lispy.mpc}:
+\inputminted{ruby}{lispy.mpc}
 
 
 \newpage
@@ -466,10 +475,12 @@ int main(int argc, char *argv[])
 \nowebindex
 
 
-\todor{Add a bibliography}
+\newpage
+\printglossaries
 
-
-\todor{Add a glossary}
+\newpage
+\bibliography{byol}
+\bibliographystyle{plainnat}
 
 
 \newpage

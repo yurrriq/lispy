@@ -19,6 +19,7 @@ with import nixpkgs {
     xelatex-noweb = (super.texlive.combine {
       inherit (super.texlive) scheme-small
         beamer
+        datatool
         dirtytalk
         ec
         etoolbox
@@ -28,20 +29,26 @@ with import nixpkgs {
         fontspec
         framed
         fvextra
+        glossaries
         hardwrap
         ifplatform
         latexmk
         lineno
         mathtools
+        mfirstuc
         minted
         realscripts
         setspace
+        substr
         textcase
         titlesec
+        tocbibind
         todonotes
         tufte-latex
         upquote
         xetex
+        xindy
+        xfor
         xkeyval
         xltxtra
         xstring
