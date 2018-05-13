@@ -24,7 +24,7 @@ latexmk_flags += -pdf -silent
 
 
 .PHONY: all srcs bins pdfs
-all: lispy.c lispy.mpc lispy.pdf lispy
+all: lispy lispy.pdf
 
 
 lispy.c: lispy.nw

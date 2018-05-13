@@ -61,13 +61,31 @@
 <<Load the Lispy grammar.>>
 
 
-double eval_binop(char *op, double x, double y)
+<<Define possible lval and error types.>>
+
+<<Define the Lispy data structures.>>
+
+
+void lval_print(lval val)
+{
+    <<Print a Lispy value.>>
+}
+
+
+void lval_println(lval val)
+{
+    lval_print(val);
+    putchar('\n');
+}
+
+
+lval eval_binop(char *op, lval x, lval y)
 {
   <<Eval(uate) a binary operation.>>
 }
 
 
-double eval(mpc_ast_t *ast)
+lval eval(mpc_ast_t *ast)
 {
     <<Eval(uate) the AST.>>
 }
@@ -217,7 +235,7 @@ Since our terms consist of only numbers and operations thereon, the
 <<Eval(uate) the input.>>=
 mpc_ast_t *ast = parsed.output;
 
-double result = eval(ast);
+lval result = eval(ast);
 @ %def ast
 @ %def result
 
@@ -227,8 +245,11 @@ double result = eval(ast);
 If the \gls{ast} is tagged as a number, return it directly.
 
 <<Eval(uate) the AST.>>=
-if (strstr(ast->tag, "number"))
-    return atof(ast->contents);
+if (strstr(ast->tag, "number")) {
+    errno = 0;
+    double x = strtod(ast->contents, NULL);    
+    return errno != ERANGE ? lval_num(x) : lval_err(LERR_BAD_NUM);
+}
 
 @
 
@@ -252,15 +273,17 @@ char *op = ast->children[++i]->contents;
 Evaluate the next child, which is the first operand.
 
 <<Eval(uate) the AST.>>=
-double result = eval(ast->children[++i]);
+lval result = eval(ast->children[++i]);
 
 @
 
 If the operation is unary subtraction, negate the operand.
 
 <<Eval(uate) the AST.>>=
-if (!strcmp(op, "-") && ast->children_num == 4)
-    return -result;
+if (!strcmp(op, "-") && ast->children_num == 4) {
+    result.num = -result.num;
+    return result;
+}
 
 @
 
@@ -288,7 +311,7 @@ If the [[op]] is \cee{"+"}, perform addition.
 
 <<Eval(uate) a binary operation.>>=
 if (!strcmp(op, "+"))
-    return x + y;
+    return lval_num(x.num + y.num);
 
 @
 
@@ -297,7 +320,7 @@ If the [[op]] is \cee{"-"}, perform subtraction.
 
 <<Eval(uate) a binary operation.>>=
 if (!strcmp(op, "-"))
-    return x - y;
+    return lval_num(x.num - y.num);
 
 @
 
@@ -306,25 +329,28 @@ If the [[op]] is \cee{"*"}, perform multiplication.
 
 <<Eval(uate) a binary operation.>>=
 if (!strcmp(op, "*"))
-    return x * y;
+    return lval_num(x.num * y.num);
 
 @
 
 
-If the [[op]] is \cee{"/"}, perform division.
+If the [[op]] is \cee{"/"}, perform division, returning the
+appropriate error when trying to divide by zero.
 
 <<Eval(uate) a binary operation.>>=
-if (!strcmp(op, "/"))
-    return x / y;
+if (!strcmp(op, "/")) {
+    return !y.num
+        ? lval_err(LERR_DIV_ZERO)
+        : lval_num(x.num / y.num);
+}
 
 @
 
 
-Otherwise, return \cee{0}.
-\todor{Bind an error message or something}
+Otherwise, return a \cee{LERR_BAD_OP} error.
 
 <<Eval(uate) a binary operation.>>=
-return 0;
+return lval_err(LERR_DIV_ZERO);
 @
 
 
@@ -345,10 +371,32 @@ return result;
 Upon success, print the result and delete the \acrshort{ast}.
 
 <<Print the result and delete the AST.>>=
-printf("%g\n", result);
+lval_println(result);
 
 mpc_ast_delete(ast);
 @
+
+<<Print a Lispy value.>>=
+switch (val.type) {
+case LVAL_NUM:
+    printf("%g", val.num);
+    break;
+
+case LVAL_ERR:
+    switch (val.err) {
+    case LERR_BAD_OP:
+        puts("Error: invalid operator");
+        break;
+    case LERR_BAD_NUM:
+        puts("Error: invalid number");
+        break;
+    case LERR_DIV_ZERO:
+        fputs("Error: division by zero", stdout);
+        break;
+    }
+    break;
+}
+@ 
 
 
 Print and delete the error upon failure.
@@ -401,6 +449,57 @@ free(input);
 \marginnote{N.B. This is a no-op when \cee{!input}.}
 
 
+\section{Error Handling}
+
+<<Define the Lispy data structures.>>=
+typedef struct {
+    int type;
+    double num;
+    int err;
+} lval;
+
+
+@
+
+<<Define possible lval and error types.>>=
+enum { LVAL_NUM, LVAL_ERR };
+
+@ %def LVAL_NUM
+@ %def LVAL_ERR
+@ %def lval_t
+
+<<Define the Lispy data structures.>>=
+lval lval_num(float x)
+{
+    lval val;
+    val.type = LVAL_NUM;
+    val.num = x;
+
+    return val;
+}
+
+
+@ %def lval_num
+
+<<Define possible lval and error types.>>=
+enum { LERR_DIV_ZERO, LERR_BAD_OP, LERR_BAD_NUM };
+@ %def LERR_DIV_ZERO
+@ %def LERR_BAD_OP
+@ %def LERR_BAD_NUM
+@ %def lval_err_t
+
+<<Define the Lispy data structures.>>=
+lval lval_err(int err)
+{
+    lval val;
+    val.type = LVAL_ERR;
+    val.err = err;
+
+    return val;
+}
+@ %def lval_err
+
+
 \section{Headers}
 
 \todoo{Describe headers}
@@ -426,9 +525,8 @@ free(input);
 
 <<Include the standard library definitions.>>=
 #include <stdlib.h>
-@ %def atof
-@ %def atoi
 @ %def free
+@ %def strtod
 
 <<Include some string operations.>>=
 #include <string.h>
