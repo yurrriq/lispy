@@ -177,21 +177,14 @@ double result = eval(ast);
 
 \todor{Describe the evaluation strategy}
 
-If the expression is tagged as an integer, return it directly.
+If the expression is tagged as a number, return it directly.
 
 <<Eval(uate) the AST.>>=
-if (strstr(ast->tag, "integer"))
-    return atoi(ast->contents);
-
-@
-
-If tagged as a float, return it directly.
-
-<<Eval(uate) the AST.>>=
-if (strstr(ast->tag, "float"))
+if (strstr(ast->tag, "number"))
     return atof(ast->contents);
 
 @
+
 
 If the AST is neither an integer nor a float, then it's an expression.
 
@@ -213,6 +206,15 @@ Evaluate the next child, which is the first operand.
 
 <<Eval(uate) the AST.>>=
 double result = eval(ast->children[++i]);
+
+@
+
+If the operation is unary subtraction, negate the operand.
+
+<<Eval(uate) the AST.>>=
+if (!strcmp(op, "-") && ast->children_num == 4)
+    return -result;
+
 @
 
 While there are more children, i.e.
@@ -248,7 +250,7 @@ If the [[op]] is \cee{"-"}, perform subtraction.
 
 <<Eval(uate) a binary operation.>>=
 if (!strcmp(op, "-"))
-    return x + y;
+    return x - y;
 
 @
 
@@ -293,10 +295,10 @@ return result;
 
 \section{P is for Print}
 
-Upon success, print the result and delete the ASTe\todoo{acronym}.
+Upon success, print the result and delete the AST\todoo{acronym}.
 
 <<Print the result and delete the AST.>>=
-printf("%.0f\n", result);
+printf("%g\n", result);
 
 mpc_ast_delete(ast);
 @

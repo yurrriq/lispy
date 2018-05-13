@@ -18,7 +18,7 @@ double eval_binop(char *op, double x, double y)
         return x + y;
 
     if (!strcmp(op, "-"))
-        return x + y;
+        return x - y;
 
     if (!strcmp(op, "*"))
         return x * y;
@@ -32,10 +32,7 @@ double eval_binop(char *op, double x, double y)
 
 double eval(mpc_ast_t * ast)
 {
-    if (strstr(ast->tag, "integer"))
-        return atoi(ast->contents);
-
-    if (strstr(ast->tag, "float"))
+    if (strstr(ast->tag, "number"))
         return atof(ast->contents);
 
     int i = 0;
@@ -43,6 +40,10 @@ double eval(mpc_ast_t * ast)
     char *op = ast->children[++i]->contents;
 
     double result = eval(ast->children[++i]);
+
+    if (!strcmp(op, "-") && ast->children_num == 4)
+        return -result;
+
     while (++i < ast->children_num
            && strstr(ast->children[i]->tag, "expr"))
         result = eval_binop(op, result, eval(ast->children[i]));
@@ -63,7 +64,7 @@ int main(int argc, char *argv[])
     mpca_lang(MPCA_LANG_DEFAULT, LISPY_GRAMMAR,
               Integer, Decimal, Number, Operator, Expr, Lispy);
 
-    puts("Lispy v0.6.0");
+    puts("Lispy v0.6.1");
     puts("Press ctrl-c to exit\n");
 
     bool nonempty;
@@ -77,7 +78,7 @@ int main(int argc, char *argv[])
                 mpc_ast_t *ast = parsed.output;
 
                 double result = eval(ast);
-                printf("%.0f\n", result);
+                printf("%g\n", result);
 
                 mpc_ast_delete(ast);
             } else {

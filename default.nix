@@ -66,6 +66,7 @@ stdenv.mkDerivation rec {
 
   nativeBuildInputs = [
     gcc
+    gdb
     indent
     iosevka
     xelatex-noweb
