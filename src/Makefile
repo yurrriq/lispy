@@ -24,24 +24,24 @@ latexmk_flags += -pdf -silent
 
 
 .PHONY: all srcs bins pdfs
-all: parsing.c lispy.mpc byol.pdf lispy
+all: lispy.c lispy.mpc lispy.pdf lispy
 
 
-parsing.c: byol.nw
+lispy.c: lispy.nw
 	notangle -R$@ $< ${cpif} $@
 	indent -kr -nut $@
 
 
-lispy.mpc: byol.nw
+lispy.mpc: lispy.nw
 	notangle -R$@ $< ${cpif} $@
 
 
-lispy: parsing.c lispy.xxd
+lispy: lispy.c lispy.xxd
 	${CC} ${C_FLAGS} $< ${C_LIBS} -o $@
 
 
 .PHONY: install
-install: lispy byol.pdf lispy.mpc parsing.c
+install: lispy lispy.pdf lispy.mpc lispy.c
 	install -m755 -Dt "$$out/bin/" lispy
-	install -m644 -Dt "$$docs/" byol.pdf
-	install -m644 -Dt "$$dev/src/" lispy.mpc parsing.c
+	install -m644 -Dt "$$docs/" lispy.pdf
+	install -m644 -Dt "$$dev/src/" lispy.mpc lispy.c

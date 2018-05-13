@@ -63,7 +63,7 @@ stdenv.mkDerivation rec {
   src = ./src;
 
   preBuild = ''
-    substituteInPlace byol.nw --replace '%VERSION%' '${version}'
+    substituteInPlace lispy.nw --replace '%VERSION%' '${version}'
     substituteInPlace preamble.tex --replace '%BRANCH%' '${branch}'
   '';
 

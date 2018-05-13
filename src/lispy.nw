@@ -6,25 +6,27 @@
 \input{preamble.tex}
 
 
-\title{Build Your Own Lisp}
+\title{Lispy: a simple Lisp-like language}
 
 
+\makeatletter
 \hypersetup{
   pdffitwindow=true,
   pdfstartview={FitH},
-  pdftitle={Build Your Own Lisp},
-  pdfauthor={Eric Bailey <eric@ericb.me>},
-  pdfsubject={Working through the eponymous book},
-  pdfkeywords={UNIX, C language, learning, lisp, programming langauge theory},
+  pdftitle={\@title},
+  pdfauthor={\@author <eric@ericb.me>},
+  pdfsubject={Working through Build Your Own Lisp by Daniel Holden},
+  pdfkeywords={UNIX, C language, learning, lisp, programming language theory},
   colorlinks=true,
   linkcolor=ErlangRed,
   urlcolor=ErlangRed
 }
+\makeatother
 
 
 \date{%
   May 10, 2018
-  \thanks{Last updated \today}%
+  \thanks{Current version: \cee{%VERSION%}. \\ Last updated \today.}%
 }
 
 
@@ -52,7 +54,7 @@
 
 \todoo{Describe the outline}
 
-<<parsing.c>>=
+<<lispy.c>>=
 <<Include the necessary headers.>>
 
 
@@ -461,8 +463,8 @@ free(input);
 
 
 \newpage
-\srclink{parsing.c}:
-\inputc{parsing.c}
+\srclink{lispy.c}:
+\inputc{lispy.c}
 
 
 \newpage
@@ -479,7 +481,7 @@ free(input);
 \printglossaries
 
 \newpage
-\bibliography{byol}
+\bibliography{lispy}
 \bibliographystyle{plainnat}
 
 

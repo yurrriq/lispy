@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
     mpca_lang(MPCA_LANG_DEFAULT, LISPY_GRAMMAR,
               Integer, Decimal, Number, Operator, Expr, Lispy);
 
-    puts("Lispy v0.6.1");
+    puts("Lispy v0.7.0");
     puts("Press ctrl-c to exit\n");
 
     bool nonempty;
