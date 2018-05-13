@@ -36,30 +36,7 @@
 
 
 \begin{abstract}
-<<parsing.c>>=
-<<Include the necessary headers.>>
-
-
-<<Load the Lispy grammar.>>
-
-
-int main(int argc, char *argv[])
-{
-    <<Define the language.>>
-
-
-    <<Print version and exit information.>>
-
-
-    <<Loop until the input is empty.>>
-
-
-    <<Undefine and delete the parsers.>>
-
-
-    return 0;
-}
-@
+  \todor{Write an abstract}
 \end{abstract}
 
 
@@ -88,7 +65,7 @@ decimal  : /-?[0-9]+\.[0-9]+/ ;
 number   : <decimal> | <integer> ;
 operator : '+' | '-' | '*' | '/' ;
 expr     : <number> | '(' <operator> <expr>+ ')' ;
-lispy    : /^/ <expr>+ /$/ ;
+lispy    : /^/ <operator> <expr>+ /$/ ;
 @
 
 \todoo{Describe this trick}
@@ -124,7 +101,8 @@ Finally, using the defined grammar and each of the [[<<created parsers>>]],%
 Integer, Decimal, Number, Operator, Expr, Lispy
 @
 %
-we can define the Lispy language.
+
+... we can define the Lispy language.
 
 <<Define the language.>>=
 mpca_lang(MPCA_LANG_DEFAULT, LISPY_GRAMMAR,
@@ -166,18 +144,18 @@ So long as [[input]] is nonempty, add it to the \cee{editline} history table.
 add_history(input);
 @
 
-Declare a variable, [[res]], to hold the results
+Declare a variable, [[parsed]], to hold the results
 of attempting to parse user input as Lispy code.
 
 <<Declare a variable to hold parsing results.>>=
-mpc_result_t res;
-@
+mpc_result_t parsed;
+@ %def parsed
 
 To attempt said parsing, use [[mpc_parse]], the result of which
 we can branch on to handle success and failure.
 
-<<The input can be parsed as Lispy code.>>=
-mpc_parse("<stdin>", input, Lispy, &res)
+<<the input can be parsed as Lispy code>>=
+mpc_parse("<stdin>", input, Lispy, &parsed)
 @
 
 
@@ -185,28 +163,150 @@ mpc_parse("<stdin>", input, Lispy, &res)
 
 \todor{Evalute the AST}
 
-<<Eval(uate) user input and print the result.>>=
-<<Declare a variable to hold parsing results.>>
-if (<<The input can be parsed as Lispy code.>>) {
-    <<Print and delete the AST.>>
-} else {
-    <<Print and delete the error.>>
-}
-@ %def res
+Since our terms consist of only numbers and operations thereon, the
+[[result]] of evaluating a Lispy expression can be represented as a
+\cee{double}-precision number.
+
+<<Eval(uate) the input.>>=
+mpc_ast_t *ast = parsed.output;
+
+double result = eval(ast);
+@ %def ast
+@ %def result
+
+
+\todor{Describe the evaluation strategy}
+
+If the expression is tagged as an integer, return it directly.
+
+<<Eval(uate) the AST.>>=
+if (strstr(ast->tag, "integer"))
+    return atoi(ast->contents);
+
+@
+
+If tagged as a float, return it directly.
+
+<<Eval(uate) the AST.>>=
+if (strstr(ast->tag, "float"))
+    return atof(ast->contents);
+
+@
+
+If the AST is neither an integer nor a float, then it's an expression.
+
+Use the \cee{int i} to interate through the children of the AST.
+
+<<Eval(uate) the AST.>>=
+int i = 0;
+
+@
+
+In an expression, the operator is always the second child.
+
+<<Eval(uate) the AST.>>=
+char *op = ast->children[++i]->contents;
+
+@ %def op
+
+Evaluate the next child, which is the first operand.
+
+<<Eval(uate) the AST.>>=
+double result = eval(ast->children[++i]);
+@
+
+While there are more children, i.e.
+
+<<there are more operands>>=
+++i < ast->children_num
+@
+
+... and the next child is an expression, i.e.
+
+<<the next child is an expression>>=
+strstr(ast->children[i]->tag, "expr")
+@
+
+... evaluate the next operand.
+
+<<Eval(uate) the next operand.>>=
+result = eval_binop(op, result, eval(ast->children[i]));
+@
+
+\todor{Describe binop evaluation}
+
+If the [[op]] is \cee{"+"}, perform addition.
+
+<<Eval(uate) a binary operation.>>=
+if (!strcmp(op, "+"))
+    return x + y;
+
+@
+
+
+If the [[op]] is \cee{"-"}, perform subtraction.
+
+<<Eval(uate) a binary operation.>>=
+if (!strcmp(op, "-"))
+    return x + y;
+
+@
+
+
+If the [[op]] is \cee{"*"}, perform multiplication.
+
+<<Eval(uate) a binary operation.>>=
+if (!strcmp(op, "*"))
+    return x * y;
+
+@
+
+
+If the [[op]] is \cee{"/"}, perform division.
+
+<<Eval(uate) a binary operation.>>=
+if (!strcmp(op, "/"))
+    return x / y;
+
+@
+
+
+Otherwise, return \cee{0}.
+\todor{Bind an error message or something}
+
+<<Eval(uate) a binary operation.>>=
+return 0;
+@
+
+
+Express the recursive operand evaluation as a \cee{while} loop,
+and return the result.
+
+<<Eval(uate) the AST.>>=
+while (<<there are more operands>>
+       && <<the next child is an expression>>)
+    <<Eval(uate) the next operand.>>
+
+return result;
+@
 
 
 \section{P is for Print}
 
-For now, simply print the AST\todoo{acronym} upon success,
-<<Print and delete the AST.>>=
-mpc_ast_print(res.output);
-mpc_ast_delete(res.output);
+Upon success, print the result and delete the ASTe\todoo{acronym}.
+
+<<Print the result and delete the AST.>>=
+printf("%.0f\n", result);
+
+mpc_ast_delete(ast);
 @
 
-or the error upon failure.
+
+Print and delete the error upon failure.
+
 <<Print and delete the error.>>=
-mpc_err_print(res.error);
-mpc_err_delete(res.error);
+mpc_err_print(parsed.error);
+mpc_err_delete(parsed.error);
 @
 
 \section{L is for Loop}
@@ -218,24 +318,32 @@ do {
 } while (nonempty);
 @ %def nonempty
 
-As previously described, in the body of the loop, {R}ead a line of user input.
+As previously described, in the body of the loop,
+\textbf{R}ead a line of user input.
 
 <<Read, eval(uate), and print.>>=
 <<Read a line of user input.>>
 @
 
 If, and only if, it's not empty, add it to the history table,
-evaluate it, and print the result.
+\textbf{E}val(uate) it, and \textbf{P}rint the result.
 
 <<Read, eval(uate), and print.>>=
 if ((nonempty = (<<[[input]] is nonempty>>))) {
     <<Add [[input]] to the history table.>>
-    <<Eval(uate) user input and print the result.>>
+
+    <<Declare a variable to hold parsing results.>>
+    if (<<the input can be parsed as Lispy code>>) {
+        <<Eval(uate) the input.>>
+        <<Print the result and delete the AST.>>
+    } else {
+        <<Print and delete the error.>>
+    }
 }
 
 @
 
-Dealloc the space pointed to by [[input]],
+Once we're done, deallocate the space pointed to by [[input]],
 making it available for futher allocation.
 
 <<Read, eval(uate), and print.>>=
@@ -246,10 +354,13 @@ free(input);
 
 \section{Headers}
 
+\todoo{Describe headers}
+
 <<Include the necessary headers.>>=
 <<Include the boolean type and values.>>
 <<Include the standard I/O functions.>>
 <<Include the standard library definitions.>>
+<<Include some string operations.>>
 
 <<Include the line editing functions from libedit.>>
 <<Include the micro parser combinator definitions.>>
@@ -266,7 +377,14 @@ free(input);
 
 <<Include the standard library definitions.>>=
 #include <stdlib.h>
+@ %def atof
+@ %def atoi
 @ %def free
+
+<<Include some string operations.>>=
+#include <string.h>
+@ %def strcmp
+@ %def strstr
 
 <<Include the line editing functions from libedit.>>=
 #include <editline/readline.h>
@@ -277,17 +395,62 @@ free(input);
 #include <mpc.h>
 @ %def mpc_ast_delete
 @ %def mpc_ast_print
+@ %def mpc_ast_t
 @ %def mpc_cleanup
 @ %def mpc_err_delete
 @ %def mpc_err_print
+@ %def mpc_new
 @ %def mpc_parse
 @ %def mpc_parser_t
 @ %def mpc_result_t
+@ %def mpca_lang
 
 
 \newpage
 \section{Full Listing}
 
+<<parsing.c>>=
+<<Include the necessary headers.>>
+
+
+<<Load the Lispy grammar.>>
+
+
+double eval_binop(char *op, double x, double y)
+{
+  <<Eval(uate) a binary operation.>>
+}
+
+
+double eval(mpc_ast_t *ast)
+{
+    <<Eval(uate) the AST.>>
+}
+
+
+int main(int argc, char *argv[])
+{
+    <<Define the language.>>
+
+    <<Print version and exit information.>>
+
+    <<Loop until the input is empty.>>
+
+    <<Undefine and delete the parsers.>>
+
+    return 0;
+}
+@ %def eval
+@ %def eval_binop
+
+
+%% \newpage
+%% \srclink{lispy.mpc}:
+%% \inputminted{ruby}{lispy.mpc}
+
+
+\newpage
+\srclink{parsing.c}:
 \inputc{parsing.c}
 
 
