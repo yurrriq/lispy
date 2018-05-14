@@ -66,12 +66,18 @@
 <<Define the Lispy data structures.>>
 
 
+@
+
+<<lispy.c>>=
 void lval_print(lval val)
 {
     <<Print a Lispy value.>>
 }
 
 
+@ %def lval_print 
+
+<<lispy.c>>=
 void lval_println(lval val)
 {
     lval_print(val);
@@ -79,6 +85,9 @@ void lval_println(lval val)
 }
 
 
+@ %def lval_println
+
+<<lispy.c>>=
 lval eval_binop(char *op, lval x, lval y)
 {
   <<Eval(uate) a binary operation.>>
@@ -91,6 +100,10 @@ lval eval(mpc_ast_t *ast)
 }
 
 
+@ %def eval
+@ %def eval_binop
+
+<<lispy.c>>=
 int main(int argc, char *argv[])
 {
     <<Define the language.>>
@@ -103,8 +116,7 @@ int main(int argc, char *argv[])
 
     return 0;
 }
-@ %def eval
-@ %def eval_binop
+@
 
 
 \newpage
@@ -247,7 +259,7 @@ If the \gls{ast} is tagged as a number, return it directly.
 <<Eval(uate) the AST.>>=
 if (strstr(ast->tag, "number")) {
     errno = 0;
-    double x = strtod(ast->contents, NULL);    
+    double x = strtod(ast->contents, NULL);
     return errno != ERANGE ? lval_num(x) : lval_err(LERR_BAD_NUM);
 }
 
@@ -396,7 +408,7 @@ case LVAL_ERR:
     }
     break;
 }
-@ 
+@
 
 
 Print and delete the error upon failure.
@@ -451,29 +463,40 @@ free(input);
 
 \section{Error Handling}
 
+\todoo{Describe this struct}
+
 <<Define the Lispy data structures.>>=
 typedef struct {
-    int type;
-    double num;
-    int err;
+    lval_type_t type;
+    union {
+        double num;
+        lval_err_t err;
+    };
 } lval;
 
 
-@
+@ %def lval
+
+A Lispy value can be either a number or an error.
 
 <<Define possible lval and error types.>>=
-enum { LVAL_NUM, LVAL_ERR };
+typedef enum {
+    LVAL_NUM,
+    LVAL_ERR
+} lval_type_t;
 
 @ %def LVAL_NUM
 @ %def LVAL_ERR
-@ %def lval_t
+@ %def lval_type_t
+
+Define a constructor for numbers.
 
 <<Define the Lispy data structures.>>=
-lval lval_num(float x)
+lval lval_num(double num)
 {
     lval val;
     val.type = LVAL_NUM;
-    val.num = x;
+    val.num = num;
 
     return val;
 }
@@ -481,15 +504,24 @@ lval lval_num(float x)
 
 @ %def lval_num
 
+Possible reasons for error include division by zero, a bad operator,
+and a bad number.
+
 <<Define possible lval and error types.>>=
-enum { LERR_DIV_ZERO, LERR_BAD_OP, LERR_BAD_NUM };
+typedef enum {
+    LERR_DIV_ZERO,
+    LERR_BAD_OP,
+    LERR_BAD_NUM
+} lval_err_t;
 @ %def LERR_DIV_ZERO
 @ %def LERR_BAD_OP
 @ %def LERR_BAD_NUM
 @ %def lval_err_t
 
+Define a constructor for errors.
+
 <<Define the Lispy data structures.>>=
-lval lval_err(int err)
+lval lval_err(lval_err_t err)
 {
     lval val;
     val.type = LVAL_ERR;

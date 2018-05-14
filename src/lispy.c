@@ -12,28 +12,37 @@ static const char LISPY_GRAMMAR[] = {
 };
 
 
-enum { LVAL_NUM, LVAL_ERR };
+typedef enum {
+    LVAL_NUM,
+    LVAL_ERR
+} lval_type_t;
 
-enum { LERR_DIV_ZERO, LERR_BAD_OP, LERR_BAD_NUM };
+typedef enum {
+    LERR_DIV_ZERO,
+    LERR_BAD_OP,
+    LERR_BAD_NUM
+} lval_err_t;
 
 typedef struct {
-    int type;
-    double num;
-    int err;
+    lval_type_t type;
+    union {
+        double num;
+        lval_err_t err;
+    };
 } lval;
 
 
-lval lval_num(float x)
+lval lval_num(double num)
 {
     lval val;
     val.type = LVAL_NUM;
-    val.num = x;
+    val.num = num;
 
     return val;
 }
 
 
-lval lval_err(int err)
+lval lval_err(lval_err_t err)
 {
     lval val;
     val.type = LVAL_ERR;
@@ -133,7 +142,7 @@ int main(int argc, char *argv[])
     mpca_lang(MPCA_LANG_DEFAULT, LISPY_GRAMMAR,
               Integer, Decimal, Number, Operator, Expr, Lispy);
 
-    puts("Lispy v0.8.0");
+    puts("Lispy v0.8.1");
     puts("Press ctrl-c to exit\n");
 
     bool nonempty;
