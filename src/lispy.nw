@@ -26,7 +26,7 @@
 
 \date{%
   May 10, 2018
-  \thanks{Current version: \cee{%VERSION%}. \\ Last updated \today.}%
+  \thanks{Current version: \cee{VERSION}. \\ Last updated \today.}%
 }
 
 
@@ -69,7 +69,67 @@
 @
 
 <<lispy.c>>=
-void lval_print(lval val)
+lval *lval_add(lval *xs, lval *x)
+{
+    <<Add an element to an S-expression.>>
+
+    return xs;
+}
+
+
+@ %def lval_add
+
+<<lispy.c>>=
+lval *lval_pop(lval *xs, int i)
+{
+    <<Extract an element and shift the list.>>
+}
+
+
+@ %def lval_pop
+
+<<lispy.c>>=
+lval *lval_take(lval *xs, int i)
+{
+    <<Pop the list then delete it.>>
+}
+
+
+@ %def lval_take
+
+<<lispy.c>>=
+void lval_print_err(lval *val)
+{
+    <<Print an error.>>
+}
+
+
+@ %def lval_print_err
+
+
+\marginhref{https://en.wikipedia.org/wiki/Forward_declaration}{Forward declare}
+[[lval_print]], since it's
+\marginhref{https://en.wikipedia.org/wiki/Mutual_recursion}{mutually recursive}
+with [[lval_sexpr_print]].
+
+<<lispy.c>>=
+void lval_print(lval *val);
+
+
+@
+
+
+<<lispy.c>>=
+void lval_sexpr_print(lval *sexpr, char open, char close)
+{
+    <<Print an S-expression.>>
+}
+
+
+@ %def lval_sexpr_print
+
+<<lispy.c>>=
+void lval_print(lval *val)
 {
     <<Print a Lispy value.>>
 }
@@ -78,7 +138,7 @@ void lval_print(lval val)
 @ %def lval_print
 
 <<lispy.c>>=
-void lval_println(lval val)
+void lval_println(lval *val)
 {
     lval_print(val);
     putchar('\n');
@@ -88,20 +148,57 @@ void lval_println(lval val)
 @ %def lval_println
 
 <<lispy.c>>=
-lval eval_binop(char *op, lval x, lval y)
+lval *builtin_op(char *op, lval *args)
 {
-  <<Eval(uate) a binary operation.>>
+  <<Eval(uate) a built-in operation.>>
 }
 
 
-lval eval(mpc_ast_t *ast)
+@ %def builtin_binop
+
+
+Forward declare [[lval_eval]], since it's mutually recursive with
+[[lval_eval_sexpr]].
+<<lispy.c>>=
+lval *lval_eval(lval* val);
+
+
+@
+
+<<lispy.c>>=
+lval* lval_eval_sexpr(lval *args)
 {
-    <<Eval(uate) the AST.>>
+    <<Evaluate an S-expression.>>
 }
 
 
-@ %def eval
-@ %def eval_binop
+@
+
+
+<<lispy.c>>=
+lval* lval_eval(lval* val)
+{
+    <<Evaluate an expression.>>
+}
+
+
+@
+
+<<lispy.c>>=
+lval *lval_read_num(mpc_ast_t *ast){
+
+    <<Read a number.>>
+}
+
+
+lval *lval_read(mpc_ast_t *ast)
+{
+    <<Read a Lispy value.>>
+}
+
+
+@ %def lval_read
+
 
 <<lispy.c>>=
 int main(int argc, char *argv[])
@@ -135,13 +232,20 @@ puts("Press ctrl-c to exit\n");
 
 In order to make sense of user input, we need to define a \gls{grammar}.
 
+\todoo{Support Core Erlang style numbers}
+%% sign    : '+' | '-'
+%% digit   : /[0-9]
+%% integer : <sign>? <digit>+
+%% float   : <sign>? <digit>+ '.' <digit>+
+
 <<lispy.mpc>>=
 integer  : /-?[0-9]+/ ;
-decimal  : /-?[0-9]+\.[0-9]+/ ;
-number   : <decimal> | <integer> ;
-operator : '+' | '-' | '*' | '/' | '%' | '^';
-expr     : <number> | '(' <operator> <expr>+ ')' ;
-lispy    : /^/ <operator> <expr>+ /$/ ;
+float    : /-?[0-9]+\.[0-9]+/;
+number   : <float> | <integer> ;
+symbol   : '+' | '-' | '*' | '/' | '%' | '^' ;
+sexpr    : '(' <symbol> <expr>+ ')' ;
+expr     : <number> | <sexpr> ;
+lispy    : /^/ <expr>* /$/ ;
 @
 
 \todoo{Describe this trick}
@@ -157,16 +261,18 @@ To implement the \gls{grammar}, we need to create some \glspl{parser}.
 
 <<Define the language.>>=
 mpc_parser_t *Integer  = mpc_new("integer");
-mpc_parser_t *Decimal  = mpc_new("decimal");
+mpc_parser_t *Float    = mpc_new("float");
 mpc_parser_t *Number   = mpc_new("number");
-mpc_parser_t *Operator = mpc_new("operator");
+mpc_parser_t *Symbol   = mpc_new("symbol");
+mpc_parser_t *Sexpr    = mpc_new("sexpr");
 mpc_parser_t *Expr     = mpc_new("expr");
 mpc_parser_t *Lispy    = mpc_new("lispy");
 
 @ %def Integer
-@ %def Decimal
+@ %def Float
 @ %def Number
-@ %def Operator
+@ %def Symbol
+@ %def Sexpr
 @ %def Expr
 @ %def Lispy
 
@@ -175,9 +281,8 @@ Finally, using the defined \gls{grammar} and
 each of the [[<<created parsers>>]],
 
 <<created parsers>>=
-Integer, Decimal, Number, Operator, Expr, Lispy
+Integer, Float, Number, Symbol, Sexpr, Expr, Lispy
 @
-%
 
 ... we can define the Lispy language.
 
@@ -192,7 +297,7 @@ Since we're implementing this in C, we need to clean up after ourselves.  The
 function.
 
 <<Undefine and delete the parsers.>>=
-mpc_cleanup(6, <<created parsers>>);
+mpc_cleanup(9, <<created parsers>>);
 @
 
 
@@ -247,152 +352,347 @@ Since our terms consist of only numbers and operations thereon, the
 <<Eval(uate) the input.>>=
 mpc_ast_t *ast = parsed.output;
 
-lval result = eval(ast);
+lval *result = lval_eval(lval_read(ast));
 @ %def ast
-@ %def result
 
 
 \todor{Describe the evaluation strategy}
 
-If the \gls{ast} is tagged as a number, return it directly.
+If the \gls{ast} is tagged as a number, convert it to a \cee{double}.
 
-<<Eval(uate) the AST.>>=
-if (strstr(ast->tag, "number")) {
-    errno = 0;
-    double x = strtod(ast->contents, NULL);
-    return errno != ERANGE ? lval_num(x) : lval_err(LERR_BAD_NUM);
+<<Read a Lispy value.>>=
+if (strstr(ast->tag, "number"))
+    return lval_read_num(ast);
+
+@
+
+\todoo{Describe this}
+
+<<Read a number.>>=
+errno = 0;
+double num = strtod(ast->contents, NULL);
+return errno != ERANGE ? lval_num(num) : lval_err(LERR_BAD_NUM);
+@
+
+If the \gls{ast} is tagged as a symbol, convert it to one.
+
+<<Read a Lispy value.>>=
+if (strstr(ast->tag, "symbol"))
+    return lval_sym(ast->contents);
+
+@
+
+\todoo{Describe this}
+
+<<Read a symbol.>>=
+@
+
+
+\todoo{Describe this}
+
+<<Read a Lispy value.>>=
+lval *sexpr = NULL;
+@
+
+If we're at the root of the \gls{ast}, create an empty list.
+
+<<Read a Lispy value.>>=
+if (!strcmp(ast->tag, ">"))
+    sexpr = lval_sexpr();
+@
+
+Similarly if it's tagged as an S-expression, create an empty list.
+
+<<Read a Lispy value.>>=
+if (strstr(ast->tag, "sexpr"))
+    sexpr = lval_sexpr();
+
+@
+
+\todoo{Describe this}
+
+<<Read a Lispy value.>>=
+for (int i = 0; i < ast->children_num; i++) {
+    if(!strcmp(ast->children[i]->contents, "(")) continue;
+    if(!strcmp(ast->children[i]->contents, ")")) continue;
+    if(!strcmp(ast->children[i]->tag, "regex")) continue;
+    sexpr = lval_add(sexpr, lval_read(ast->children[i]));
+}
+
+@
+
+\begin{marginnote}
+<<Reallocate the memory used.>>=
+xs->cell = realloc(xs->cell, sizeof(lval *) * xs->count);
+@
+\end{marginnote}
+
+\todoo{Describe this, incl. how it's not cons}
+
+<<Add an element to an S-expression.>>=
+xs->count++;
+<<Reallocate the memory used.>>
+xs->cell[xs->count - 1] = x;
+@
+
+Finally, return the S-expression.
+
+<<Read a Lispy value.>>=
+return sexpr;
+@
+
+\begin{marginnote}
+<<For each argument>>=
+for (int i = 0; i < args->count; i++)
+@
+
+<<the argument is not a number>>=
+!lval_is_num(args->cell[i])
+@
+
+<<Delete the arguments and return a bad number error.>>=
+lval_del(args);
+return lval_err(LERR_BAD_NUM);
+@
+\end{marginnote}
+
+
+
+\subsection{Evaluating built-in operations}
+
+Ensure all arguments are numbers.
+<<Eval(uate) a built-in operation.>>=
+<<For each argument>> {
+    if (<<the argument is not a number>>) {
+        <<Delete the arguments and return a bad number error.>>
+    }
 }
 
 @
 
 
-If the \acrshort{ast} is neither an integer nor a float, then it's an
-expression.  Use the \cee{int i} to interate through the children of
-the \acrshort{ast}.
+\begin{marginnote}
+<<Pop the first element.>>=
+lval_pop(args, 0);
+@
+\end{marginnote}
 
-<<Eval(uate) the AST.>>=
-int i = 0;
+
+Pop the first element.
+<<Eval(uate) a built-in operation.>>=
+lval *result = <<Pop the first element.>>
 
 @
 
-In an expression, the operator is always the second child.
-
-<<Eval(uate) the AST.>>=
-char *op = ast->children[++i]->contents;
-
-@ %def op
-
-Evaluate the next child, which is the first operand.
-
-<<Eval(uate) the AST.>>=
-lval result = eval(ast->children[++i]);
-
-@
 
 If the operation is unary subtraction, negate the operand.
+<<Eval(uate) a built-in operation.>>=
+if (!strcmp(op, "-") && !args->count)
+    result->num = -result->num;
 
-<<Eval(uate) the AST.>>=
-if (!strcmp(op, "-") && ast->children_num == 4) {
-    result.num = -result.num;
-    return result;
+@
+
+
+\begin{marginnote}
+<<Pop the next element.>>=
+lval *y = <<Pop the first element.>>
+@
+\end{marginnote}
+
+<<Eval(uate) a built-in operation.>>=
+while (args->count > 0) {
+    <<Pop the next element.>>
+
+    <<Perform a built-in operation.>>
 }
 
 @
 
-While there are more children, i.e.
-
-<<there are more operands>>=
-++i < ast->children_num
-@
-
-... and the next child is an expression, i.e.
-
-<<the next child is an expression>>=
-strstr(ast->children[i]->tag, "expr")
-@
-
-... evaluate the next operand.
-
-<<Eval(uate) the next operand.>>=
-result = eval_binop(op, result, eval(ast->children[i]));
-@
-
-\todor{Describe binop evaluation}
 
 If the [[op]] is \cee{"+"}, perform addition.
-
-<<Eval(uate) a binary operation.>>=
-if (!strcmp(op, "+"))
-    return lval_num(x.num + y.num);
-
+<<Perform a built-in operation.>>=
+if (!strcmp(op, "+")) {
+    result->num += y->num;
+}
 @
 
 
 If the [[op]] is \cee{"-"}, perform subtraction.
-
-<<Eval(uate) a binary operation.>>=
-if (!strcmp(op, "-"))
-    return lval_num(x.num - y.num);
-
+<<Perform a built-in operation.>>=
+else if (!strcmp(op, "-")) {
+    result->num -= y->num;
+}
 @
 
 
 If the [[op]] is \cee{"*"}, perform multiplication.
-
-<<Eval(uate) a binary operation.>>=
-if (!strcmp(op, "*"))
-    return lval_num(x.num * y.num);
-
+<<Perform a built-in operation.>>=
+else if (!strcmp(op, "*")) {
+    result->num *= y->num;
+}
 @
 
 
 If the [[op]] is \cee{"/"}, perform division, returning the
-appropriate error when trying to divide by zero.
-
-<<Eval(uate) a binary operation.>>=
-if (!strcmp(op, "/"))
-    return !y.num
-        ? lval_err(LERR_DIV_ZERO)
-        : lval_num(x.num / y.num);
-
+appropriate error and cleaning up when trying to divide by zero.
+<<Perform a built-in operation.>>=
+else if (!strcmp(op, "/")) {
+    if (!y->num) {
+        lval_del(result);
+        lval_del(y);
+        result = lval_err(LERR_DIV_ZERO);
+        break;
+    }
+    result->num /= y->num;
+}
 @
+
 
 If the [[op]] is \cee{"%"}, calculate the integer modulo, returning the
 appropriate error when trying to divide by zero.
 
-<<Eval(uate) a binary operation.>>=
-if (!strcmp(op, "%"))
-    return !y.num
-        ? lval_err(LERR_DIV_ZERO)
-        : lval_num(fmod(x.num, y.num));
-
+<<Perform a built-in operation.>>=
+else if (!strcmp(op, "%")) {
+    if (!y->num) {
+        lval_del(result);
+        lval_del(y);
+        result = lval_err(LERR_DIV_ZERO);
+        break;
+    }
+    result->num = fmod(result->num, y->num);
+}
 @
 
 If the [[opp]] is \cee{"^"}, perform exponentiation.
 
-<<Eval(uate) a binary operation.>>=
-if (!strcmp(op, "^"))
-    return lval_num(pow(x.num, y.num));
-
+<<Perform a built-in operation.>>=
+else if (!strcmp(op, "^")) {
+    result->num = pow(result->num, y->num);
+}
 @
-
 
 Otherwise, return a \cee{LERR_BAD_OP} error.
-
-<<Eval(uate) a binary operation.>>=
-return lval_err(LERR_DIV_ZERO);
+<<Perform a built-in operation.>>=
+else {
+    lval_del(result);
+    lval_del(y);
+    result = lval_err(LERR_BAD_OP);
+    break;
+}
 @
 
 
-Express the recursive operand evaluation as a \cee{while} loop,
-and return the result.
+Delete [[y]], now that we're done with it.
+<<Perform a built-in operation.>>=
+lval_del(y);
+@
 
-<<Eval(uate) the AST.>>=
-while (<<there are more operands>>
-       && <<the next child is an expression>>)
-    <<Eval(uate) the next operand.>>
+
+Delete the input expression and return the result.
+<<Eval(uate) a built-in operation.>>=
+lval_del(args);
 
 return result;
+@
+
+\subsection{Evaluating (S)-expressions}
+
+If the expression is empty, return it;
+<<Evaluate an S-expression.>>=
+if (!args->count)
+    return args;
+@
+
+<<Evaluate an S-expression.>>=
+<<For each argument>> {
+    args->cell[i] = lval_eval(args->cell[i]);
+    if (args->cell[i]->type == LVAL_ERR)
+        return lval_take(args, i);
+}
+
+@
+
+If we're dealing with a single expression, return it.
+<<Evaluate an S-expression.>>=
+if (args->count == 1)
+    return lval_take(args, 0);
+
+@
+
+<<Evaluate an S-expression.>>=
+lval *car = <<Pop the first element.>>;
+if (car->type != LVAL_SYM) {
+    lval_del(car);
+    lval_del(args);
+
+    return lval_err(LERR_BAD_SEXPR);
+}
+
+@
+
+<<Evaluate an S-expression.>>=
+lval *result = builtin_op(car->sym, args);
+lval_del(car);
+
+return result;
+@
+
+
+If, and only if, an expression is an S-expression,
+we must evaluate it recursively.
+<<Evaluate an expression.>>=
+if (val->type == LVAL_SEXPR)
+    return lval_eval_sexpr(val);
+
+return val;
+@
+
+%% \section{Pop and take}
+
+Extract the element at index [[i]].
+<<Extract an element and shift the list.>>=
+lval *elem = xs->cell[i];
+
+@
+
+Shift memory after the element at index [[i]].
+<<Extract an element and shift the list.>>=
+memmove(&xs->cell[i], &xs->cell[i + 1],
+    sizeof(lval *) * (xs->count - i - 1));
+
+@
+
+Decrease the count.
+<<Extract an element and shift the list.>>=
+xs->count--;
+
+@
+
+\begin{marginnote}
+<<Return the extracted element.>>=
+return elem;
+@
+\end{marginnote}
+
+Reallocate the memory used and return the extracted element.
+<<Extract an element and shift the list.>>=
+<<Reallocate the memory used.>>
+
+<<Return the extracted element.>>
+@
+
+
+\todoo{Describe this}
+
+<<Pop the list then delete it.>>=
+lval *elem = lval_pop(xs, i);
+lval_del(xs);
+
+@
+
+Return the extracted element.
+<<Pop the list then delete it.>>=
+<<Return the extracted element.>>
 @
 
 
@@ -406,28 +706,68 @@ lval_println(result);
 mpc_ast_delete(ast);
 @
 
-<<Print a Lispy value.>>=
-switch (val.type) {
-case LVAL_NUM:
-    printf("%g", val.num);
-    break;
+\todoo{Describe this}
 
-case LVAL_ERR:
-    switch (val.err) {
-    case LERR_BAD_OP:
-        puts("Error: invalid operator");
-        break;
-    case LERR_BAD_NUM:
-        puts("Error: invalid number");
-        break;
-    case LERR_DIV_ZERO:
-        fputs("Error: division by zero", stdout);
-        break;
-    }
-    break;
+Print the opening character.
+<<Print an S-expression.>>=
+putchar(open);
+@
+
+Print all but the last element with a trailing space.
+<<Print an S-expression.>>=
+int i = 0;
+while (i++ < sexpr->count - 1) {
+    lval_print(sexpr->cell[i]);
+    putchar(' ');
 }
 @
 
+Print the last element.
+<<Print an S-expression.>>=
+lval_print(sexpr->cell[i]);
+@
+
+Print the closing character.
+<<Print an S-expression.>>=
+putchar(close);
+@
+
+
+\begin{marginnote}
+<<Print an error.>>=
+switch (val->err) {
+case LERR_BAD_NUM:
+    puts("Error: invalid number");
+    break;
+case LERR_BAD_OP:
+    puts("Error: invalid operator");
+    break;
+case LERR_BAD_SEXPR:
+    puts("Error: S-expression does not start with symbol");
+    break;
+case LERR_DIV_ZERO:
+    puts("Error: division by zero");
+    break;
+}
+@
+\end{marginnote}
+
+<<Print a Lispy value.>>=
+switch (val->type) {
+case LVAL_ERR:
+    lval_print_err(val);
+    break;
+case LVAL_NUM:
+    printf("%g", val->num);
+    break;
+case LVAL_SEXPR:
+    lval_sexpr_print(val, '(', ')');
+    break;
+case LVAL_SYM:
+    fputs(val->sym, stdout);
+    break;
+}
+@
 
 Print and delete the error upon failure.
 
@@ -484,12 +824,15 @@ free(input);
 \todoo{Describe this struct}
 
 <<Define the Lispy data structures.>>=
-typedef struct {
+typedef struct lval {
     lval_type_t type;
     union {
         double num;
         lval_err_t err;
+        char* sym;
     };
+    int count;
+    struct lval **cell;
 } lval;
 
 
@@ -499,28 +842,47 @@ A Lispy value can be either a number or an error.
 
 <<Define possible lval and error types.>>=
 typedef enum {
+    LVAL_ERR,
     LVAL_NUM,
-    LVAL_ERR
+    LVAL_SEXPR,
+    LVAL_SYM
 } lval_type_t;
 
+
+@ %def LVAL_ERR
 @ %def LVAL_NUM
 @ %def LVAL_ERR
+@ %def LVAL_SEXPR
+@ %def LVAL_SYM
 @ %def lval_type_t
 
 Define a constructor for numbers.
 
 <<Define the Lispy data structures.>>=
-lval lval_num(double num)
+lval *lval_num(double num)
 {
-    lval val;
-    val.type = LVAL_NUM;
-    val.num = num;
+    lval *val = malloc(sizeof(lval));
+    val->type = LVAL_NUM;
+    val->num = num;
 
     return val;
 }
 
 
 @ %def lval_num
+
+
+Define a convenient predicate for numbers.
+
+<<Define the Lispy data structures.>>=
+bool lval_is_num(lval *val)
+{
+    return val->type == LVAL_NUM;
+}
+
+
+@ %def lval_is_num
+
 
 Possible reasons for error include division by zero, a bad operator,
 and a bad number.
@@ -529,8 +891,10 @@ and a bad number.
 typedef enum {
     LERR_DIV_ZERO,
     LERR_BAD_OP,
-    LERR_BAD_NUM
+    LERR_BAD_NUM,
+    LERR_BAD_SEXPR
 } lval_err_t;
+
 @ %def LERR_DIV_ZERO
 @ %def LERR_BAD_OP
 @ %def LERR_BAD_NUM
@@ -539,15 +903,75 @@ typedef enum {
 Define a constructor for errors.
 
 <<Define the Lispy data structures.>>=
-lval lval_err(lval_err_t err)
+lval *lval_err(lval_err_t err)
 {
-    lval val;
-    val.type = LVAL_ERR;
-    val.err = err;
+    lval *val = malloc(sizeof(lval));
+    val->type = LVAL_ERR;
+    val->err = err;
 
     return val;
 }
+
+
 @ %def lval_err
+
+
+Define a constructor for symbol.
+
+<<Define the Lispy data structures.>>=
+lval *lval_sym(char *s)
+{
+    lval *val = malloc(sizeof(lval));
+    val->type = LVAL_SYM;
+    val->sym = malloc(strlen(s) + 1);
+    strcpy(val->sym, s);
+
+    return val;
+}
+
+
+@ %def lval_sym
+
+
+Define a constructor for an S-expression.
+
+<<Define the Lispy data structures.>>=
+lval *lval_sexpr(void)
+{
+    lval *val = malloc(sizeof(lval));
+    val->type = LVAL_SEXPR;
+    val->count = 0;
+    val->cell = NULL;
+
+    return val;
+}
+
+
+@ %def lval_sexpr
+
+
+Define a destructor for \cee{lval*}.
+
+<<Define the Lispy data structures.>>=
+void lval_del(lval *val)
+{
+    switch(val->type) {
+    case LVAL_ERR:
+    case LVAL_NUM:
+        break;
+    case LVAL_SEXPR:
+        for (int i = 0; i < val->count; i++)
+            lval_del(val->cell[i]);
+        free(val->cell);
+        break;
+    case LVAL_SYM:
+        free(val->sym);
+        break;
+    }
+
+    free(val);
+}
+@ %def lval_del
 
 
 \section{Headers}
@@ -633,6 +1057,7 @@ lval lval_err(lval_err_t err)
 
 \newpage
 \printglossaries
+
 
 \newpage
 \bibliography{lispy}
