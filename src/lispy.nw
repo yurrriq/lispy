@@ -244,7 +244,8 @@ float    : /-?[0-9]+\.[0-9]+/;
 number   : <float> | <integer> ;
 symbol   : '+' | '-' | '*' | '/' | '%' | '^' ;
 sexpr    : '(' <symbol> <expr>+ ')' ;
-expr     : <number> | <sexpr> ;
+qexpr    : '{' <symbol>? <expr>+ '}' ;
+expr     : <number> | <sexpr> | <qexpr> ;
 lispy    : /^/ <expr>* /$/ ;
 @
 
@@ -265,6 +266,7 @@ mpc_parser_t *Float    = mpc_new("float");
 mpc_parser_t *Number   = mpc_new("number");
 mpc_parser_t *Symbol   = mpc_new("symbol");
 mpc_parser_t *Sexpr    = mpc_new("sexpr");
+mpc_parser_t *Qexpr    = mpc_new("qexpr");
 mpc_parser_t *Expr     = mpc_new("expr");
 mpc_parser_t *Lispy    = mpc_new("lispy");
 
@@ -273,6 +275,7 @@ mpc_parser_t *Lispy    = mpc_new("lispy");
 @ %def Number
 @ %def Symbol
 @ %def Sexpr
+@ %def Qexpr
 @ %def Expr
 @ %def Lispy
 
@@ -281,7 +284,7 @@ Finally, using the defined \gls{grammar} and
 each of the [[<<created parsers>>]],
 
 <<created parsers>>=
-Integer, Float, Number, Symbol, Sexpr, Expr, Lispy
+Integer, Float, Number, Symbol, Sexpr, Qexpr, Expr, Lispy
 @
 
 ... we can define the Lispy language.
@@ -297,7 +300,7 @@ Since we're implementing this in C, we need to clean up after ourselves.  The
 function.
 
 <<Undefine and delete the parsers.>>=
-mpc_cleanup(7, <<created parsers>>);
+mpc_cleanup(8, <<created parsers>>);
 @
 
 
@@ -391,21 +394,28 @@ if (strstr(ast->tag, "symbol"))
 \todoo{Describe this}
 
 <<Read a Lispy value.>>=
-lval *sexpr = NULL;
+lval *val = NULL;
 @
 
 If we're at the root of the \gls{ast}, create an empty list.
 
 <<Read a Lispy value.>>=
 if (!strcmp(ast->tag, ">"))
-    sexpr = lval_sexpr();
+    val = lval_sexpr();
 @
+
+If it's tagged as a Q-expression, create an empty list.
+<<Read a Lispy value.>>=
+if (strstr(ast->tag, "qexpr"))
+    val = lval_qexpr();
+@
+
 
 Similarly if it's tagged as an S-expression, create an empty list.
 
 <<Read a Lispy value.>>=
 if (strstr(ast->tag, "sexpr"))
-    sexpr = lval_sexpr();
+    val = lval_sexpr();
 
 @
 
@@ -415,8 +425,10 @@ if (strstr(ast->tag, "sexpr"))
 for (int i = 0; i < ast->children_num; i++) {
     if(!strcmp(ast->children[i]->contents, "(")) continue;
     if(!strcmp(ast->children[i]->contents, ")")) continue;
+    if(!strcmp(ast->children[i]->contents, "{")) continue;
+    if(!strcmp(ast->children[i]->contents, "}")) continue;
     if(!strcmp(ast->children[i]->tag, "regex")) continue;
-    sexpr = lval_add(sexpr, lval_read(ast->children[i]));
+    val = lval_add(val, lval_read(ast->children[i]));
 }
 
 @
@@ -435,10 +447,9 @@ xs->count++;
 xs->cell[xs->count - 1] = x;
 @
 
-Finally, return the S-expression.
-
+Finally, return the Lispy value.
 <<Read a Lispy value.>>=
-return sexpr;
+return val;
 @
 
 \begin{marginnote}
@@ -755,6 +766,9 @@ case LVAL_ERR:
 case LVAL_NUM:
     printf("%g", val->num);
     break;
+case LVAL_QEXPR:
+    lval_expr_print(val, '{', '}');
+    break;
 case LVAL_SEXPR:
     lval_expr_print(val, '(', ')');
     break;
@@ -839,6 +853,7 @@ A Lispy value can be either a number or an error.
 typedef enum {
     LVAL_ERR,
     LVAL_NUM,
+    LVAL_QEXPR,
     LVAL_SEXPR,
     LVAL_SYM
 } lval_type_t;
@@ -847,6 +862,7 @@ typedef enum {
 @ %def LVAL_ERR
 @ %def LVAL_ERR
 @ %def LVAL_NUM
+@ %def LVAL_QEXPR
 @ %def LVAL_SEXPR
 @ %def LVAL_SYM
 @ %def lval_type_t
@@ -945,6 +961,22 @@ lval *lval_sexpr(void)
 @ %def lval_sexpr
 
 
+Define a constructor for a Q-expression.
+<<Define the Lispy data structures.>>=
+lval *lval_qexpr(void)
+{
+    lval *val = malloc(sizeof(lval));
+    val->type = LVAL_QEXPR;
+    val->count = 0;
+    val->cell = NULL;
+
+    return val;
+}
+
+
+@ %def lval_qexpr
+
+
 Define a destructor for \cee{lval*}.
 
 <<Define the Lispy data structures.>>=
@@ -954,6 +986,7 @@ void lval_del(lval *val)
     case LVAL_ERR:
     case LVAL_NUM:
         break;
+    case LVAL_QEXPR:
     case LVAL_SEXPR:
         for (int i = 0; i < val->count; i++)
             lval_del(val->cell[i]);

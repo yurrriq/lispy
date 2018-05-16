@@ -16,6 +16,7 @@ static const char LISPY_GRAMMAR[] = {
 typedef enum {
     LVAL_ERR,
     LVAL_NUM,
+    LVAL_QEXPR,
     LVAL_SEXPR,
     LVAL_SYM
 } lval_type_t;
@@ -89,12 +90,24 @@ lval *lval_sexpr(void)
 }
 
 
+lval *lval_qexpr(void)
+{
+    lval *val = malloc(sizeof(lval));
+    val->type = LVAL_QEXPR;
+    val->count = 0;
+    val->cell = NULL;
+
+    return val;
+}
+
+
 void lval_del(lval * val)
 {
     switch (val->type) {
     case LVAL_ERR:
     case LVAL_NUM:
         break;
+    case LVAL_QEXPR:
     case LVAL_SEXPR:
         for (int i = 0; i < val->count; i++)
             lval_del(val->cell[i]);
@@ -185,6 +198,9 @@ void lval_print(lval * val)
         break;
     case LVAL_NUM:
         printf("%g", val->num);
+        break;
+    case LVAL_QEXPR:
+        lval_expr_print(val, '{', '}');
         break;
     case LVAL_SEXPR:
         lval_expr_print(val, '(', ')');
@@ -315,23 +331,29 @@ lval *lval_read(mpc_ast_t * ast)
     if (strstr(ast->tag, "symbol"))
         return lval_sym(ast->contents);
 
-    lval *sexpr = NULL;
+    lval *val = NULL;
     if (!strcmp(ast->tag, ">"))
-        sexpr = lval_sexpr();
+        val = lval_sexpr();
+    if (strstr(ast->tag, "qexpr"))
+        val = lval_qexpr();
     if (strstr(ast->tag, "sexpr"))
-        sexpr = lval_sexpr();
+        val = lval_sexpr();
 
     for (int i = 0; i < ast->children_num; i++) {
         if (!strcmp(ast->children[i]->contents, "("))
             continue;
         if (!strcmp(ast->children[i]->contents, ")"))
             continue;
+        if (!strcmp(ast->children[i]->contents, "{"))
+            continue;
+        if (!strcmp(ast->children[i]->contents, "}"))
+            continue;
         if (!strcmp(ast->children[i]->tag, "regex"))
             continue;
-        sexpr = lval_add(sexpr, lval_read(ast->children[i]));
+        val = lval_add(val, lval_read(ast->children[i]));
     }
 
-    return sexpr;
+    return val;
 }
 
 
@@ -342,13 +364,14 @@ int main(int argc, char *argv[])
     mpc_parser_t *Number = mpc_new("number");
     mpc_parser_t *Symbol = mpc_new("symbol");
     mpc_parser_t *Sexpr = mpc_new("sexpr");
+    mpc_parser_t *Qexpr = mpc_new("qexpr");
     mpc_parser_t *Expr = mpc_new("expr");
     mpc_parser_t *Lispy = mpc_new("lispy");
 
     mpca_lang(MPCA_LANG_DEFAULT, LISPY_GRAMMAR,
-              Integer, Float, Number, Symbol, Sexpr, Expr, Lispy);
+              Integer, Float, Number, Symbol, Sexpr, Qexpr, Expr, Lispy);
 
-    puts("Lispy v1.0.1");
+    puts("Lispy v1.1.1");
     puts("Press ctrl-c to exit\n");
 
     bool nonempty;
@@ -374,7 +397,8 @@ int main(int argc, char *argv[])
         free(input);
     } while (nonempty);
 
-    mpc_cleanup(7, Integer, Float, Number, Symbol, Sexpr, Expr, Lispy);
+    mpc_cleanup(8, Integer, Float, Number, Symbol, Sexpr, Qexpr, Expr,
+                Lispy);
 
     return 0;
 }
