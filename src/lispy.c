@@ -165,15 +165,14 @@ void lval_print_err(lval * val)
 void lval_print(lval * val);
 
 
-void lval_sexpr_print(lval * sexpr, char open, char close)
+void lval_expr_print(lval * expr, char open, char close)
 {
     putchar(open);
-    int i = 0;
-    while (i++ < sexpr->count - 1) {
-        lval_print(sexpr->cell[i]);
-        putchar(' ');
+    for (int i = 0; i < expr->count; i++) {
+        lval_print(expr->cell[i]);
+        if (i != (expr->count - 1))
+            putchar(' ');
     }
-    lval_print(sexpr->cell[i]);
     putchar(close);
 }
 
@@ -188,7 +187,7 @@ void lval_print(lval * val)
         printf("%g", val->num);
         break;
     case LVAL_SEXPR:
-        lval_sexpr_print(val, '(', ')');
+        lval_expr_print(val, '(', ')');
         break;
     case LVAL_SYM:
         fputs(val->sym, stdout);
@@ -302,7 +301,6 @@ lval *lval_eval(lval * val)
 
 lval *lval_read_num(mpc_ast_t * ast)
 {
-
     errno = 0;
     double num = strtod(ast->contents, NULL);
     return errno != ERANGE ? lval_num(num) : lval_err(LERR_BAD_NUM);
@@ -350,7 +348,7 @@ int main(int argc, char *argv[])
     mpca_lang(MPCA_LANG_DEFAULT, LISPY_GRAMMAR,
               Integer, Float, Number, Symbol, Sexpr, Expr, Lispy);
 
-    puts("Lispy v1.0.0");
+    puts("Lispy v1.0.1");
     puts("Press ctrl-c to exit\n");
 
     bool nonempty;
@@ -376,7 +374,7 @@ int main(int argc, char *argv[])
         free(input);
     } while (nonempty);
 
-    mpc_cleanup(9, Integer, Float, Number, Symbol, Sexpr, Expr, Lispy);
+    mpc_cleanup(7, Integer, Float, Number, Symbol, Sexpr, Expr, Lispy);
 
     return 0;
 }

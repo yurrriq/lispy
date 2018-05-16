@@ -110,7 +110,7 @@ void lval_print_err(lval *val)
 \marginhref{https://en.wikipedia.org/wiki/Forward_declaration}{Forward declare}
 [[lval_print]], since it's
 \marginhref{https://en.wikipedia.org/wiki/Mutual_recursion}{mutually recursive}
-with [[lval_sexpr_print]].
+with [[lval_expr_print]].
 
 <<lispy.c>>=
 void lval_print(lval *val);
@@ -120,13 +120,13 @@ void lval_print(lval *val);
 
 
 <<lispy.c>>=
-void lval_sexpr_print(lval *sexpr, char open, char close)
+void lval_expr_print(lval *expr, char open, char close)
 {
-    <<Print an S-expression.>>
+    <<Print an expression.>>
 }
 
 
-@ %def lval_sexpr_print
+@ %def lval_expr_print
 
 <<lispy.c>>=
 void lval_print(lval *val)
@@ -185,8 +185,8 @@ lval* lval_eval(lval* val)
 @
 
 <<lispy.c>>=
-lval *lval_read_num(mpc_ast_t *ast){
-
+lval *lval_read_num(mpc_ast_t *ast)
+{
     <<Read a number.>>
 }
 
@@ -297,7 +297,7 @@ Since we're implementing this in C, we need to clean up after ourselves.  The
 function.
 
 <<Undefine and delete the parsers.>>=
-mpc_cleanup(9, <<created parsers>>);
+mpc_cleanup(7, <<created parsers>>);
 @
 
 
@@ -709,26 +709,21 @@ mpc_ast_delete(ast);
 \todoo{Describe this}
 
 Print the opening character.
-<<Print an S-expression.>>=
+<<Print an expression.>>=
 putchar(open);
 @
 
 Print all but the last element with a trailing space.
-<<Print an S-expression.>>=
-int i = 0;
-while (i++ < sexpr->count - 1) {
-    lval_print(sexpr->cell[i]);
-    putchar(' ');
+<<Print an expression.>>=
+for (int i = 0; i < expr->count; i++) {
+    lval_print(expr->cell[i]);
+    if (i != (expr->count - 1))
+        putchar(' ');
 }
 @
 
-Print the last element.
-<<Print an S-expression.>>=
-lval_print(sexpr->cell[i]);
-@
-
 Print the closing character.
-<<Print an S-expression.>>=
+<<Print an expression.>>=
 putchar(close);
 @
 
@@ -761,7 +756,7 @@ case LVAL_NUM:
     printf("%g", val->num);
     break;
 case LVAL_SEXPR:
-    lval_sexpr_print(val, '(', ')');
+    lval_expr_print(val, '(', ')');
     break;
 case LVAL_SYM:
     fputs(val->sym, stdout);
@@ -850,8 +845,8 @@ typedef enum {
 
 
 @ %def LVAL_ERR
-@ %def LVAL_NUM
 @ %def LVAL_ERR
+@ %def LVAL_NUM
 @ %def LVAL_SEXPR
 @ %def LVAL_SYM
 @ %def lval_type_t
