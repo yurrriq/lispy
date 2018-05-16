@@ -350,7 +350,7 @@ int main(int argc, char *argv[])
     mpca_lang(MPCA_LANG_DEFAULT, LISPY_GRAMMAR,
               Integer, Float, Number, Symbol, Sexpr, Expr, Lispy);
 
-    puts("Lispy v0.9.0");
+    puts("Lispy v1.0.0");
     puts("Press ctrl-c to exit\n");
 
     bool nonempty;
