@@ -1,5 +1,5 @@
 C_FLAGS ?= -std=c99 -Wall -Werror
-C_LIBS  := -ledit -lmpc
+C_LIBS  := -ledit -lm -lmpc
 cpif    ?= | cpif
 
 

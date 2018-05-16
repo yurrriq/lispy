@@ -75,7 +75,7 @@ void lval_print(lval val)
 }
 
 
-@ %def lval_print 
+@ %def lval_print
 
 <<lispy.c>>=
 void lval_println(lval val)
@@ -139,7 +139,7 @@ In order to make sense of user input, we need to define a \gls{grammar}.
 integer  : /-?[0-9]+/ ;
 decimal  : /-?[0-9]+\.[0-9]+/ ;
 number   : <decimal> | <integer> ;
-operator : '+' | '-' | '*' | '/' ;
+operator : '+' | '-' | '*' | '/' | '%' | '^';
 expr     : <number> | '(' <operator> <expr>+ ')' ;
 lispy    : /^/ <operator> <expr>+ /$/ ;
 @
@@ -350,11 +350,29 @@ If the [[op]] is \cee{"/"}, perform division, returning the
 appropriate error when trying to divide by zero.
 
 <<Eval(uate) a binary operation.>>=
-if (!strcmp(op, "/")) {
+if (!strcmp(op, "/"))
     return !y.num
         ? lval_err(LERR_DIV_ZERO)
         : lval_num(x.num / y.num);
-}
+
+@
+
+If the [[op]] is \cee{"%"}, calculate the integer modulo, returning the
+appropriate error when trying to divide by zero.
+
+<<Eval(uate) a binary operation.>>=
+if (!strcmp(op, "%"))
+    return !y.num
+        ? lval_err(LERR_DIV_ZERO)
+        : lval_num(fmod(x.num, y.num));
+
+@
+
+If the [[opp]] is \cee{"^"}, perform exponentiation.
+
+<<Eval(uate) a binary operation.>>=
+if (!strcmp(op, "^"))
+    return lval_num(pow(x.num, y.num));
 
 @
 
@@ -540,6 +558,7 @@ lval lval_err(lval_err_t err)
 <<Include the boolean type and values.>>
 <<Include the standard I/O functions.>>
 <<Include the standard library definitions.>>
+<<Include some mathematical definitions.>>
 <<Include some string operations.>>
 
 <<Include the line editing functions from libedit.>>
@@ -559,6 +578,11 @@ lval lval_err(lval_err_t err)
 #include <stdlib.h>
 @ %def free
 @ %def strtod
+
+<<Include some mathematical definitions.>>=
+#include <math.h>
+@ %def fmod
+@ %def pow
 
 <<Include some string operations.>>=
 #include <string.h>

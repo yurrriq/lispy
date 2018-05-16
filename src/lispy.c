@@ -1,6 +1,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #include <string.h>
 
 #include <editline/readline.h>
@@ -94,10 +95,16 @@ lval eval_binop(char *op, lval x, lval y)
     if (!strcmp(op, "*"))
         return lval_num(x.num * y.num);
 
-    if (!strcmp(op, "/")) {
+    if (!strcmp(op, "/"))
         return !y.num ? lval_err(LERR_DIV_ZERO)
             : lval_num(x.num / y.num);
-    }
+
+    if (!strcmp(op, "%"))
+        return !y.num ? lval_err(LERR_DIV_ZERO)
+            : lval_num(fmod(x.num, y.num));
+
+    if (!strcmp(op, "^"))
+        return lval_num(pow(x.num, y.num));
 
     return lval_err(LERR_DIV_ZERO);
 }
@@ -142,7 +149,7 @@ int main(int argc, char *argv[])
     mpca_lang(MPCA_LANG_DEFAULT, LISPY_GRAMMAR,
               Integer, Decimal, Number, Operator, Expr, Lispy);
 
-    puts("Lispy v0.8.1");
+    puts("Lispy v0.9.0");
     puts("Press ctrl-c to exit\n");
 
     bool nonempty;
