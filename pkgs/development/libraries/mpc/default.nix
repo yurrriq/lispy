@@ -13,7 +13,7 @@ stdenv.mkDerivation rec {
 
   patches = [
     (fetchpatch {
-      name = "fix-minor-memory-link.patch";
+      name = "fix-minor-memory-leak.patch";
       url = https://patch-diff.githubusercontent.com/raw/orangeduck/mpc/pull/82.patch;
       sha256 = "0ilraklz6m49ryinxrz4j8rhc3hjnykir2v1j8bdgzq2c6kmdx4a";
     })
