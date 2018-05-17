@@ -23,8 +23,8 @@ latexmk_flags += -pdf -silent
 	latexmk ${latexmk_flags} $<
 
 
-.PHONY: all srcs bins pdfs
-all: lispy lispy.pdf
+.PHONY: all
+all: lispy.mpc lispy.c lispy lispy.pdf
 
 
 lispy.c: lispy.nw
@@ -41,7 +41,7 @@ lispy: lispy.c lispy.xxd
 
 
 .PHONY: install
-install: lispy lispy.pdf lispy.mpc lispy.c
+install:
 	install -m755 -Dt "$$out/bin/" lispy
 	install -m644 -Dt "$$docs/" lispy.pdf
 	install -m644 -Dt "$$dev/src/" lispy.mpc lispy.c
