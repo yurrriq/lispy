@@ -1,8 +1,6 @@
-integer  : /-?[0-9]+/ ;
-float    : /-?[0-9]+\.[0-9]+/;
-number   : <float> | <integer> ;
-symbol   : '+' | '-' | '*' | '/' | '%' | '^' ;
-sexpr    : '(' <symbol> <expr>+ ')' ;
-qexpr    : '{' <symbol>? <expr>+ '}' ;
-expr     : <number> | <sexpr> | <qexpr> ;
-lispy    : /^/ <expr>* /$/ ;
+number "number" : /[-+]?[0-9]+(\.[0-9]+)?/ ;
+symbol "symbol" : /[a-za-Z_+*%^\/\\=<>!*-]+/ ;
+sexpr           : '(' <symbol> <expr>+ ')' ;
+qexpr           : '{' (<symbol> | <expr>)* '}' ;
+expr            : <number> | <sexpr> | <qexpr> ;
+lispy           : /^/ <expr>* /$/ ;

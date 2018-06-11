@@ -58,6 +58,9 @@
 <<Include the necessary headers.>>
 
 
+<<Define some useful macros.>>
+
+
 <<Load the Lispy grammar.>>
 
 
@@ -96,15 +99,6 @@ lval *lval_take(lval *xs, int i)
 
 
 @ %def lval_take
-
-<<lispy.c>>=
-void lval_print_err(lval *val)
-{
-    <<Print an error.>>
-}
-
-
-@ %def lval_print_err
 
 
 \marginhref{https://en.wikipedia.org/wiki/Forward_declaration}{Forward declare}
@@ -148,6 +142,25 @@ void lval_println(lval *val)
 @ %def lval_println
 
 <<lispy.c>>=
+lval *builtin_list(lval *args)
+{
+    <<Convert an S-expression to a Q-expression.>>
+}
+
+
+@ %def builtin_list
+
+<<lispy.c>>=
+lval *builtin_head(lval *args)
+{
+    <<Pop the list and delete the rest.>>
+}
+
+
+@ %def builtin_head
+
+
+<<lispy.c>>=
 lval *builtin_op(char *op, lval *args)
 {
   <<Eval(uate) a built-in operation.>>
@@ -155,6 +168,15 @@ lval *builtin_op(char *op, lval *args)
 
 
 @ %def builtin_binop
+
+
+<<lispy.c>>=
+lval *builtin(char *fname, lval *args)
+{
+    <<Evaluate a built-in function or operation.>>
+}
+
+@ %def builtin
 
 
 Forward declare [[lval_eval]], since it's mutually recursive with
@@ -232,21 +254,13 @@ puts("Press ctrl-c to exit\n");
 
 In order to make sense of user input, we need to define a \gls{grammar}.
 
-\todoo{Support Core Erlang style numbers}
-%% sign    : '+' | '-'
-%% digit   : /[0-9]
-%% integer : <sign>? <digit>+
-%% float   : <sign>? <digit>+ '.' <digit>+
-
 <<lispy.mpc>>=
-integer  : /-?[0-9]+/ ;
-float    : /-?[0-9]+\.[0-9]+/;
-number   : <float> | <integer> ;
-symbol   : '+' | '-' | '*' | '/' | '%' | '^' ;
-sexpr    : '(' <symbol> <expr>+ ')' ;
-qexpr    : '{' <symbol>? <expr>+ '}' ;
-expr     : <number> | <sexpr> | <qexpr> ;
-lispy    : /^/ <expr>* /$/ ;
+number "number" : /[-+]?[0-9]+(\.[0-9]+)?/ ;
+symbol "symbol" : /[a-za-Z_+*%^\/\\=<>!*-]+/ ;
+sexpr           : '(' <symbol> <expr>+ ')' ;
+qexpr           : '{' (<symbol> | <expr>)* '}' ;
+expr            : <number> | <sexpr> | <qexpr> ;
+lispy           : /^/ <expr>* /$/ ;
 @
 
 \todoo{Describe this trick}
@@ -261,17 +275,13 @@ static const char LISPY_GRAMMAR[] = {
 To implement the \gls{grammar}, we need to create some \glspl{parser}.
 
 <<Define the language.>>=
-mpc_parser_t *Integer  = mpc_new("integer");
-mpc_parser_t *Float    = mpc_new("float");
-mpc_parser_t *Number   = mpc_new("number");
-mpc_parser_t *Symbol   = mpc_new("symbol");
-mpc_parser_t *Sexpr    = mpc_new("sexpr");
-mpc_parser_t *Qexpr    = mpc_new("qexpr");
-mpc_parser_t *Expr     = mpc_new("expr");
-mpc_parser_t *Lispy    = mpc_new("lispy");
+mpc_parser_t *Number    = mpc_new("number");
+mpc_parser_t *Symbol    = mpc_new("symbol");
+mpc_parser_t *Sexpr     = mpc_new("sexpr");
+mpc_parser_t *Qexpr     = mpc_new("qexpr");
+mpc_parser_t *Expr      = mpc_new("expr");
+mpc_parser_t *Lispy     = mpc_new("lispy");
 
-@ %def Integer
-@ %def Float
 @ %def Number
 @ %def Symbol
 @ %def Sexpr
@@ -284,14 +294,21 @@ Finally, using the defined \gls{grammar} and
 each of the [[<<created parsers>>]],
 
 <<created parsers>>=
-Integer, Float, Number, Symbol, Sexpr, Qexpr, Expr, Lispy
+Number, Symbol, Sexpr, Qexpr, Expr, Lispy
 @
 
 ... we can define the Lispy language.
 
 <<Define the language.>>=
-mpca_lang(MPCA_LANG_DEFAULT, LISPY_GRAMMAR,
-          <<created parsers>>);
+mpc_err_t *err = mpca_lang(MPCA_LANG_PREDICTIVE, LISPY_GRAMMAR,
+                     <<created parsers>>);
+
+if (err != NULL) {
+    puts(LISPY_GRAMMAR);
+    mpc_err_print(err);
+    mpc_err_delete(err);
+    exit(100);
+}
 @
 
 
@@ -300,7 +317,7 @@ Since we're implementing this in C, we need to clean up after ourselves.  The
 function.
 
 <<Undefine and delete the parsers.>>=
-mpc_cleanup(8, <<created parsers>>);
+mpc_cleanup(6, <<created parsers>>);
 @
 
 
@@ -383,11 +400,6 @@ If the \gls{ast} is tagged as a symbol, convert it to one.
 if (strstr(ast->tag, "symbol"))
     return lval_sym(ast->contents);
 
-@
-
-\todoo{Describe this}
-
-<<Read a symbol.>>=
 @
 
 
@@ -574,7 +586,7 @@ else if (!strcmp(op, "%")) {
 }
 @
 
-If the [[opp]] is \cee{"^"}, perform exponentiation.
+If the [[op]] is \cee{"^"}, perform exponentiation.
 
 <<Perform a built-in operation.>>=
 else if (!strcmp(op, "^")) {
@@ -605,6 +617,76 @@ lval_del(args);
 
 return result;
 @
+
+\subsection{Built-in functions}
+
+If the function name is \cee{list}, convert the given S-expression to
+a Q-expression and return it.
+<<Evaluate a built-in function or operation.>>=
+if (!strcmp("list", fname))
+    return builtin_list(args);
+
+@
+
+<<Convert an S-expression to a Q-expression.>>=
+args->type = LVAL_QEXPR;
+return args;
+@
+
+If the function name is \cee{"head"}, pop the list and delete the rest.
+<<Evaluate a built-in function or operation.>>=
+if (!strcmp("head", fname))
+    return builtin_head(args);
+@
+
+Ensure there is exactly one argument.
+<<Pop the list and delete the rest.>>=
+LVAL_ASSERT(args, args->count == 1,
+    "too many arguments for 'head'");
+@
+
+Ensure the first argument is a Q-expression.
+<<Pop the list and delete the rest.>>=
+LVAL_ASSERT(args, args->cell[0]->type == LVAL_QEXPR,
+    "invalid argument for 'head'");
+@
+
+Ensure the list passed to \cee{head} is nonempty.
+<<Pop the list and delete the rest.>>=
+LVAL_ASSERT(args, args->cell[0]->count,
+    "cannot get 'head' of the empty list");
+@
+
+eTake the first element of the list.
+<<Pop the list and delete the rest.>>=
+lval *val = lval_take(args, 0);
+@
+
+Delete the rest.
+<<Pop the list and delete the rest.>>=
+while (val->count > 1)
+    lval_del(lval_pop(val, 1));
+@
+
+Return the head of the list.
+<<Pop the list and delete the rest.>>=
+return val;
+@
+
+If the function name is a built-in operation, perform and return it.
+<<Evaluate a built-in function or operation.>>=
+if (strstr("+-/*^%", fname))
+    return builtin_op(fname, args);
+
+@
+
+Otherwise, free the memory used by [[args]] and return an error.
+<<Evaluate a built-in function or operation.>>=
+lval_del(args);
+
+return lval_err(LERR_BAD_FUNC);
+@
+
 
 \subsection{Evaluating (S)-expressions}
 
@@ -642,7 +724,7 @@ if (car->type != LVAL_SYM) {
 @
 
 <<Evaluate an S-expression.>>=
-lval *result = builtin_op(car->sym, args);
+lval *result = builtin(car->sym, args);
 lval_del(car);
 
 return result;
@@ -738,30 +820,10 @@ Print the closing character.
 putchar(close);
 @
 
-
-\begin{marginnote}
-<<Print an error.>>=
-switch (val->err) {
-case LERR_BAD_NUM:
-    puts("Error: invalid number");
-    break;
-case LERR_BAD_OP:
-    puts("Error: invalid operator");
-    break;
-case LERR_BAD_SEXPR:
-    puts("Error: S-expression does not start with symbol");
-    break;
-case LERR_DIV_ZERO:
-    puts("Error: division by zero");
-    break;
-}
-@
-\end{marginnote}
-
 <<Print a Lispy value.>>=
 switch (val->type) {
 case LVAL_ERR:
-    lval_print_err(val);
+    printf("Error: %s", val->err);
     break;
 case LVAL_NUM:
     printf("%g", val->num);
@@ -837,8 +899,8 @@ typedef struct lval {
     lval_type_t type;
     union {
         double num;
-        lval_err_t err;
-        char* sym;
+        char *err;
+        char *sym;
     };
     int count;
     struct lval **cell;
@@ -895,26 +957,29 @@ bool lval_is_num(lval *val)
 @ %def lval_is_num
 
 
-Possible reasons for error include division by zero, a bad operator,
-and a bad number.
+Define a macro for asserting a condition or returning an error.
 
-<<Define possible lval and error types.>>=
-typedef enum {
-    LERR_DIV_ZERO,
-    LERR_BAD_OP,
-    LERR_BAD_NUM,
-    LERR_BAD_SEXPR
-} lval_err_t;
+<<Define some useful macros.>>=
+#define LVAL_ASSERT(args, cond, err) \
+    if (!(cond)) { \
+        lval_del(args); \
+        return lval_err(err); \
+    }
 
-@ %def LERR_DIV_ZERO
-@ %def LERR_BAD_OP
-@ %def LERR_BAD_NUM
-@ %def lval_err_t
+@
+
+<<Define some useful macros.>>=
+#define LERR_BAD_FUNC "unknown function"
+#define LERR_BAD_NUM "invalid number"
+#define LERR_BAD_OP "invalid operation"
+#define LERR_DIV_ZERO "division by zero"
+#define LERR_BAD_SEXPR "invalid S-expression"
+@
 
 Define a constructor for errors.
 
 <<Define the Lispy data structures.>>=
-lval *lval_err(lval_err_t err)
+lval *lval_err(char *err)
 {
     lval *val = malloc(sizeof(lval));
     val->type = LVAL_ERR;
@@ -984,6 +1049,8 @@ void lval_del(lval *val)
 {
     switch(val->type) {
     case LVAL_ERR:
+        free(val->err);
+        break;
     case LVAL_NUM:
         break;
     case LVAL_QEXPR:

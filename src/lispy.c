@@ -8,6 +8,19 @@
 #include <mpc.h>
 
 
+#define LVAL_ASSERT(args, cond, err) \
+    if (!(cond)) { \
+        lval_del(args); \
+        return lval_err(err); \
+    }
+
+#define LERR_BAD_FUNC "unknown function"
+#define LERR_BAD_NUM "invalid number"
+#define LERR_BAD_OP "invalid operation"
+#define LERR_DIV_ZERO "division by zero"
+#define LERR_BAD_SEXPR "invalid S-expression"
+
+
 static const char LISPY_GRAMMAR[] = {
 #include "lispy.xxd"
 };
@@ -22,19 +35,12 @@ typedef enum {
 } lval_type_t;
 
 
-typedef enum {
-    LERR_DIV_ZERO,
-    LERR_BAD_OP,
-    LERR_BAD_NUM,
-    LERR_BAD_SEXPR
-} lval_err_t;
-
 
 typedef struct lval {
     lval_type_t type;
     union {
         double num;
-        lval_err_t err;
+        char *err;
         char *sym;
     };
     int count;
@@ -58,7 +64,7 @@ bool lval_is_num(lval * val)
 }
 
 
-lval *lval_err(lval_err_t err)
+lval *lval_err(char *err)
 {
     lval *val = malloc(sizeof(lval));
     val->type = LVAL_ERR;
@@ -105,6 +111,8 @@ void lval_del(lval * val)
 {
     switch (val->type) {
     case LVAL_ERR:
+        free(val->err);
+        break;
     case LVAL_NUM:
         break;
     case LVAL_QEXPR:
@@ -156,25 +164,6 @@ lval *lval_take(lval * xs, int i)
 }
 
 
-void lval_print_err(lval * val)
-{
-    switch (val->err) {
-    case LERR_BAD_NUM:
-        puts("Error: invalid number");
-        break;
-    case LERR_BAD_OP:
-        puts("Error: invalid operator");
-        break;
-    case LERR_BAD_SEXPR:
-        puts("Error: S-expression does not start with symbol");
-        break;
-    case LERR_DIV_ZERO:
-        puts("Error: division by zero");
-        break;
-    }
-}
-
-
 void lval_print(lval * val);
 
 
@@ -194,7 +183,7 @@ void lval_print(lval * val)
 {
     switch (val->type) {
     case LVAL_ERR:
-        lval_print_err(val);
+        printf("Error: %s", val->err);
         break;
     case LVAL_NUM:
         printf("%g", val->num);
@@ -216,6 +205,27 @@ void lval_println(lval * val)
 {
     lval_print(val);
     putchar('\n');
+}
+
+
+lval *builtin_list(lval * args)
+{
+    args->type = LVAL_QEXPR;
+    return args;
+}
+
+
+lval *builtin_head(lval * args)
+{
+    LVAL_ASSERT(args, args->count == 1, "too many arguments for 'head'");
+    LVAL_ASSERT(args, args->cell[0]->type == LVAL_QEXPR,
+                "invalid argument for 'head'");
+    LVAL_ASSERT(args, args->cell[0]->count,
+                "cannot get 'head' of the empty list");
+    lval *val = lval_take(args, 0);
+    while (val->count > 1)
+        lval_del(lval_pop(val, 1));
+    return val;
 }
 
 
@@ -275,6 +285,21 @@ lval *builtin_op(char *op, lval * args)
 }
 
 
+lval *builtin(char *fname, lval * args)
+{
+    if (!strcmp("list", fname))
+        return builtin_list(args);
+
+    if (!strcmp("head", fname))
+        return builtin_head(args);
+    if (strstr("+-/*^%", fname))
+        return builtin_op(fname, args);
+
+    lval_del(args);
+
+    return lval_err(LERR_BAD_FUNC);
+}
+
 lval *lval_eval(lval * val);
 
 
@@ -299,7 +324,7 @@ lval *lval_eval_sexpr(lval * args)
         return lval_err(LERR_BAD_SEXPR);
     }
 
-    lval *result = builtin_op(car->sym, args);
+    lval *result = builtin(car->sym, args);
     lval_del(car);
 
     return result;
@@ -359,8 +384,6 @@ lval *lval_read(mpc_ast_t * ast)
 
 int main(int argc, char *argv[])
 {
-    mpc_parser_t *Integer = mpc_new("integer");
-    mpc_parser_t *Float = mpc_new("float");
     mpc_parser_t *Number = mpc_new("number");
     mpc_parser_t *Symbol = mpc_new("symbol");
     mpc_parser_t *Sexpr = mpc_new("sexpr");
@@ -368,8 +391,15 @@ int main(int argc, char *argv[])
     mpc_parser_t *Expr = mpc_new("expr");
     mpc_parser_t *Lispy = mpc_new("lispy");
 
-    mpca_lang(MPCA_LANG_DEFAULT, LISPY_GRAMMAR,
-              Integer, Float, Number, Symbol, Sexpr, Qexpr, Expr, Lispy);
+    mpc_err_t *err = mpca_lang(MPCA_LANG_PREDICTIVE, LISPY_GRAMMAR,
+                               Number, Symbol, Sexpr, Qexpr, Expr, Lispy);
+
+    if (err != NULL) {
+        puts(LISPY_GRAMMAR);
+        mpc_err_print(err);
+        mpc_err_delete(err);
+        exit(100);
+    }
 
     puts("Lispy v1.1.1");
     puts("Press ctrl-c to exit\n");
@@ -397,8 +427,7 @@ int main(int argc, char *argv[])
         free(input);
     } while (nonempty);
 
-    mpc_cleanup(8, Integer, Float, Number, Symbol, Sexpr, Qexpr, Expr,
-                Lispy);
+    mpc_cleanup(6, Number, Symbol, Sexpr, Qexpr, Expr, Lispy);
 
     return 0;
 }
