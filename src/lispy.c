@@ -164,6 +164,18 @@ lval *lval_take(lval * xs, int i)
 }
 
 
+lval *lval_join(lval * xs, lval * ys)
+{
+    while (ys->count) {
+        xs = lval_add(xs, lval_pop(ys, 0));
+    }
+
+    lval_del(ys);
+
+    return xs;
+}
+
+
 void lval_print(lval * val);
 
 
@@ -226,6 +238,57 @@ lval *builtin_head(lval * args)
     while (val->count > 1)
         lval_del(lval_pop(val, 1));
     return val;
+}
+
+
+lval *builtin_tail(lval * args)
+{
+    LVAL_ASSERT(args, args->count == 1, "too many arguments for 'tail'");
+    LVAL_ASSERT(args, args->cell[0]->type == LVAL_QEXPR,
+                "invalid argument for 'tail'");
+    LVAL_ASSERT(args, args->cell[0]->count,
+                "cannot get 'tail' of the empty list");
+
+    lval *val = lval_take(args, 0);
+    lval_del(lval_pop(val, 0));
+
+    return val;
+}
+
+
+lval *builtin_join(lval * args)
+{
+    for (int i = 0; i < args->count; i++) {
+        LVAL_ASSERT(args, args->cell[i]->type == LVAL_QEXPR,
+                    "invalid argument for 'join'");
+    }
+
+    lval *res = lval_pop(args, 0);
+
+    while (args->count) {
+        res = lval_join(res, lval_pop(args, 0));
+    }
+
+    lval_del(args);
+
+    return res;
+
+}
+
+lval *lval_eval(lval * val);
+
+
+lval *builtin_eval(lval * args)
+{
+    LVAL_ASSERT(args, args->count == 1, "too many arguments for 'eval'");
+
+    LVAL_ASSERT(args, args->cell[0]->type == LVAL_QEXPR,
+                "invalid argument for 'eval'");
+
+    lval *expr = lval_take(args, 0);
+    expr->type = LVAL_SEXPR;
+
+    return lval_eval(expr);
 }
 
 
@@ -292,6 +355,12 @@ lval *builtin(char *fname, lval * args)
 
     if (!strcmp("head", fname))
         return builtin_head(args);
+    if (!strcmp("tail", fname))
+        return builtin_tail(args);
+    if (!strcmp("join", fname))
+        return builtin_join(args);
+    if (!strcmp("eval", fname))
+        return builtin_eval(args);
     if (strstr("+-/*^%", fname))
         return builtin_op(fname, args);
 
@@ -299,9 +368,6 @@ lval *builtin(char *fname, lval * args)
 
     return lval_err(LERR_BAD_FUNC);
 }
-
-lval *lval_eval(lval * val);
-
 
 lval *lval_eval_sexpr(lval * args)
 {
@@ -401,7 +467,7 @@ int main(int argc, char *argv[])
         exit(100);
     }
 
-    puts("Lispy v1.1.1");
+    puts("Lispy v1.4.0");
     puts("Press ctrl-c to exit\n");
 
     bool nonempty;

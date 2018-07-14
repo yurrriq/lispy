@@ -100,6 +100,15 @@ lval *lval_take(lval *xs, int i)
 
 @ %def lval_take
 
+<<lispy.c>>=
+lval *lval_join(lval *xs, lval *ys)
+{
+    <<Add every y in ys to xs.>>
+}
+
+
+@ %def lval_join
+
 
 \marginhref{https://en.wikipedia.org/wiki/Forward_declaration}{Forward declare}
 [[lval_print]], since it's
@@ -161,6 +170,44 @@ lval *builtin_head(lval *args)
 
 
 <<lispy.c>>=
+lval *builtin_tail(lval *args)
+{
+    <<Return the tail of a list.>>
+}
+
+
+@ %def builtin_tail
+
+<<lispy.c>>=
+lval *builtin_join(lval *args)
+{
+    <<Return the concatenation of lists.>>
+}
+
+@ %def builtin_join
+
+
+Forward declare [[lval_eval]], since it's used by [[builtin_eval]] and
+mutually recursive with [[lval_eval_sexpr]].
+
+<<lispy.c>>=
+lval *lval_eval(lval* val);
+
+
+@
+
+
+<<lispy.c>>=
+lval *builtin_eval(lval *args)
+{
+    <<Evaluate a Q-expression.>>
+}
+
+
+@ %def builtin_val
+
+
+<<lispy.c>>=
 lval *builtin_op(char *op, lval *args)
 {
   <<Eval(uate) a built-in operation.>>
@@ -178,14 +225,6 @@ lval *builtin(char *fname, lval *args)
 
 @ %def builtin
 
-
-Forward declare [[lval_eval]], since it's mutually recursive with
-[[lval_eval_sexpr]].
-<<lispy.c>>=
-lval *lval_eval(lval* val);
-
-
-@
 
 <<lispy.c>>=
 lval* lval_eval_sexpr(lval *args)
@@ -633,7 +672,7 @@ args->type = LVAL_QEXPR;
 return args;
 @
 
-If the function name is \cee{"head"}, pop the list and delete the rest.
+If the function name is \cee{head}, pop the list and delete the rest.
 <<Evaluate a built-in function or operation.>>=
 if (!strcmp("head", fname))
     return builtin_head(args);
@@ -657,7 +696,7 @@ LVAL_ASSERT(args, args->cell[0]->count,
     "cannot get 'head' of the empty list");
 @
 
-eTake the first element of the list.
+Take the first element of the list.
 <<Pop the list and delete the rest.>>=
 lval *val = lval_take(args, 0);
 @
@@ -672,6 +711,106 @@ Return the head of the list.
 <<Pop the list and delete the rest.>>=
 return val;
 @
+
+
+If the function name is \cee{tail}, return the given Q-expression with
+the first element removed.
+
+<<Evaluate a built-in function or operation.>>=
+if (!strcmp("tail", fname))
+    return builtin_tail(args);
+@
+
+\todoo{Split this up and describe}
+<<Return the tail of a list.>>=
+LVAL_ASSERT(args, args->count == 1,
+    "too many arguments for 'tail'");
+LVAL_ASSERT(args, args->cell[0]->type == LVAL_QEXPR,
+    "invalid argument for 'tail'");
+LVAL_ASSERT(args, args->cell[0]->count,
+    "cannot get 'tail' of the empty list");
+
+lval *val = lval_take(args, 0);
+lval_del(lval_pop(val, 0));
+
+return val;
+@
+
+
+If the function name is \cee{join}, concatenate the given Q-expressions.
+
+<<Evaluate a built-in function or operation.>>=
+if (!strcmp("join", fname))
+    return builtin_join(args);
+@
+
+Ensure every argument is a Q-expression.
+
+<<Return the concatenation of lists.>>=
+<<For each argument>> {
+    LVAL_ASSERT(args, args->cell[i]->type == LVAL_QEXPR,
+                "invalid argument for 'join'");
+}
+
+@
+
+\todoo{Describe this}
+
+<<Return the concatenation of lists.>>=
+lval *res = lval_pop(args, 0);
+
+while (args->count) {
+    res = lval_join(res, lval_pop(args, 0));
+}
+
+lval_del(args);
+
+return res;
+
+@
+
+\todoo{Describe this}
+
+<<Add every y in ys to xs.>>=
+while (ys->count) {
+    xs = lval_add(xs, lval_pop(ys, 0));
+}
+
+lval_del(ys);
+
+return xs;
+@
+
+
+If the function name is \cee{eval}, convert a given Q-expression to an
+S-expression, and evaluate it.
+
+<<Evaluate a built-in function or operation.>>=
+if (!strcmp("eval", fname))
+    return builtin_eval(args);
+@
+
+Ensure exactly one Q-expression is passed to \cee{eval}.
+
+<<Evaluate a Q-expression.>>=
+LVAL_ASSERT(args, args->count == 1,
+            "too many arguments for 'eval'");
+
+LVAL_ASSERT(args, args->cell[0]->type == LVAL_QEXPR,
+            "invalid argument for 'eval'");
+
+@
+
+Convert the Q-expression to an S-expression, by changing it's
+\cee{type}, then evaluate and return it.
+
+<<Evaluate a Q-expression.>>=
+lval *expr = lval_take(args, 0);
+expr->type = LVAL_SEXPR;
+
+return lval_eval(expr);
+@
+
 
 If the function name is a built-in operation, perform and return it.
 <<Evaluate a built-in function or operation.>>=
