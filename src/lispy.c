@@ -20,6 +20,23 @@
 #define LERR_DIV_ZERO "division by zero"
 #define LERR_BAD_SEXPR "invalid S-expression"
 
+#define LVAL_ERROR_MSG_NUM_ARGS(fname, prefix) ({ \
+    char *_msg = malloc(strlen(prefix) + 17 + strlen(fname) + 2); \
+    strcpy(_msg, prefix); \
+    strcat(_msg, " arguments for '"); \
+    strcat(_msg, fname); \
+    strcat(_msg, "'"); \
+    _msg; \
+})
+
+
+#define LVAL_ASSERT_NUM_ARGS(fname, num, args) ({ \
+    LVAL_ASSERT(args, args->count >= num, \
+                LVAL_ERROR_MSG_NUM_ARGS(fname, "too few")); \
+    LVAL_ASSERT(args, args->count <= num, \
+                LVAL_ERROR_MSG_NUM_ARGS(fname, "too many")); \
+})
+
 
 static const char LISPY_GRAMMAR[] = {
 #include "lispy.xxd"
@@ -229,7 +246,7 @@ lval *builtin_list(lval * args)
 
 lval *builtin_head(lval * args)
 {
-    LVAL_ASSERT(args, args->count == 1, "too many arguments for 'head'");
+    LVAL_ASSERT_NUM_ARGS("head", 1, args);
     LVAL_ASSERT(args, args->cell[0]->type == LVAL_QEXPR,
                 "invalid argument for 'head'");
     LVAL_ASSERT(args, args->cell[0]->count,
@@ -243,7 +260,7 @@ lval *builtin_head(lval * args)
 
 lval *builtin_tail(lval * args)
 {
-    LVAL_ASSERT(args, args->count == 1, "too many arguments for 'tail'");
+    LVAL_ASSERT_NUM_ARGS("tail", 1, args);
     LVAL_ASSERT(args, args->cell[0]->type == LVAL_QEXPR,
                 "invalid argument for 'tail'");
     LVAL_ASSERT(args, args->cell[0]->count,
@@ -467,7 +484,7 @@ int main(int argc, char *argv[])
         exit(100);
     }
 
-    puts("Lispy v1.4.0");
+    puts("Lispy v1.4.1");
     puts("Press ctrl-c to exit\n");
 
     bool nonempty;

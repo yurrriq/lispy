@@ -680,8 +680,7 @@ if (!strcmp("head", fname))
 
 Ensure there is exactly one argument.
 <<Pop the list and delete the rest.>>=
-LVAL_ASSERT(args, args->count == 1,
-    "too many arguments for 'head'");
+LVAL_ASSERT_NUM_ARGS("head", 1, args);
 @
 
 Ensure the first argument is a Q-expression.
@@ -723,8 +722,7 @@ if (!strcmp("tail", fname))
 
 \todoo{Split this up and describe}
 <<Return the tail of a list.>>=
-LVAL_ASSERT(args, args->count == 1,
-    "too many arguments for 'tail'");
+LVAL_ASSERT_NUM_ARGS("tail", 1, args);
 LVAL_ASSERT(args, args->cell[0]->type == LVAL_QEXPR,
     "invalid argument for 'tail'");
 LVAL_ASSERT(args, args->cell[0]->count,
@@ -1113,7 +1111,29 @@ Define a macro for asserting a condition or returning an error.
 #define LERR_BAD_OP "invalid operation"
 #define LERR_DIV_ZERO "division by zero"
 #define LERR_BAD_SEXPR "invalid S-expression"
+
 @
+
+
+<<Define some useful macros.>>=
+#define LVAL_ERROR_MSG_NUM_ARGS(fname, prefix) ({ \
+    char *_msg = malloc(strlen(prefix) + 17 + strlen(fname) + 2); \
+    strcpy(_msg, prefix); \
+    strcat(_msg, " arguments for '"); \
+    strcat(_msg, fname); \
+    strcat(_msg, "'"); \
+    _msg; \
+})
+
+
+#define LVAL_ASSERT_NUM_ARGS(fname, num, args) ({ \
+    LVAL_ASSERT(args, args->count >= num, \
+                LVAL_ERROR_MSG_NUM_ARGS(fname, "too few")); \
+    LVAL_ASSERT(args, args->count <= num, \
+                LVAL_ERROR_MSG_NUM_ARGS(fname, "too many")); \
+})
+@
+
 
 Define a constructor for errors.
 
